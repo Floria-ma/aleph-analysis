@@ -200,7 +200,11 @@ if __name__=='__main__':
 
             # write to output file
             outputfile = file.replace('/','').replace('.root', '.pkl')
-            outputfile = os.path.join(args.outputdir, outputfile)
-            if not os.path.exists(args.outputdir): os.makedirs(args.outputdir)
+            if '/data/' in file:
+                outputfile = os.path.join(args.outputdir+'/data', outputfile)
+            else:
+                outputfile = os.path.join(args.outputdir+'/mc', outputfile)
+            os.makedirs(outdir, exist_ok=True)
+            outputfile = os.path.join(outdir, outputfile)
             with open(outputfile, 'wb') as f:
                 pickle.dump(scores, f)

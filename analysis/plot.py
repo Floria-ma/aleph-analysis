@@ -33,6 +33,7 @@ from analysis.systematics import get_weight_variation
 from analysis.systematics import format_systematic_name
 from analysis.external_variables import read_external_variables
 from analysis.external_variables import find_external_files
+from analysis.thrust import add_thrust_variables
 from plotting.plot import plot
 
 # global pyplot settings
@@ -109,6 +110,31 @@ def make_histograms(datastruct, variables,
             # set sample dict and branches to read
             this_sampledict = None
             this_branches_to_read = None
+            extra_branches = [
+                "SecondaryVertices_mass",
+                "Event_njets",
+                "Jets_nChargedHad",
+                "Jets_px", 
+                "Jets_py",
+                "Jets_pz",
+                "genEventType",
+                "SecondaryVertices_nTracks",
+                "SecondaryVertices_ndof",
+                "SecondaryVertices_dxy",
+                "SecondaryVertices_dz",
+                "SecondaryVertices_xrel",
+                "SecondaryVertices_yrel",
+                "SecondaryVertices_zrel",
+                "SecondaryVertices_prel",
+                "SecondaryVertices_correctedMass",
+                "V0Candidates_mass",
+                "V0Candidates_nTracks",
+                "V0Candidates_ndof",
+                "V0Candidates_xrel",
+                "V0Candidates_yrel",
+                "V0Candidates_zrel",
+                "V0Candidates_prel",
+            ]
             if do_read_events:
                 this_sampledict = {process_key: files}
                 this_branches_to_read = branches_to_read[:]
@@ -120,6 +146,7 @@ def make_histograms(datastruct, variables,
                     if branches is None: continue
                     for branch in branches: this_branches_to_read.append(branch)
                 # remove duplicates
+                this_branches_to_read += extra_branches
                 this_branches_to_read = list(set(this_branches_to_read))
 
             # split files in batches if requested
@@ -148,6 +175,8 @@ def make_histograms(datastruct, variables,
                     # read events
                     events = read_sampledict(batch_sampledict, treename=treename,
                                branches=this_branches_to_read, verbose=False)
+                    events[process_key] = add_thrust_variables(events[process_key])
+                    print(sorted(events[process_key].fields))
 
                 else: events = {process_key: files}
                 print(f'Read batch with {len(events[process_key])} entries'
@@ -349,6 +378,7 @@ def make_events(dtypedict,
             print(f'Reading events...')
             events[dtype][process_key] = read_sampledict(this_sampledict, treename=treename,
                                            branches=branches_to_read, verbose=False)[process_key]
+            events[dtype][process_key] = add_thrust_variables(events[dtype][process_key])
             nevents = len(events[dtype][process_key])
             nbranches = len(events[dtype][process_key].fields)
             print(f'Read sample with {nevents} entries and {nbranches} branches.')
