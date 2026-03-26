@@ -5,6 +5,7 @@ import pickle
 import argparse
 import numpy as np
 import awkward as ak
+import uproot
 import matplotlib.pyplot as plt
 
 thisdir = os.path.abspath(os.path.dirname(__file__))
@@ -59,6 +60,35 @@ if __name__=='__main__':
         for varname in prepdict[key]['var_names']:
             if translation is not None: varname = translation.get(varname, varname)
             branches_to_read.append(varname)
+
+        extra_branches = [
+        "SecondaryVertices_mass",
+        "Event_njets",
+        "Jets_nChargedHad",
+        "Jets_px", 
+        "Jets_py",
+        "Jets_pz",
+        "genEventType",
+        "SecondaryVertices_nTracks",
+        "SecondaryVertices_ndof",
+        "SecondaryVertices_dxy",
+        "SecondaryVertices_dz",
+        "SecondaryVertices_xrel",
+        "SecondaryVertices_yrel",
+        "SecondaryVertices_zrel",
+        "SecondaryVertices_prel",
+        "SecondaryVertices_correctedMass",
+        "V0Candidates_mass",
+        "V0Candidates_nTracks",
+        "V0Candidates_ndof",
+        "V0Candidates_xrel",
+        "V0Candidates_yrel",
+        "V0Candidates_zrel",
+        "V0Candidates_prel",
+    ]
+    branches_to_read += extra_branches
+    branches_to_read = list(set(branches_to_read))
+
     # add variables needed for runtime variable definitions
     newvarnames = add_variables(None, names_only=True)
     for varname in newvarnames['input_names']:
@@ -108,7 +138,11 @@ if __name__=='__main__':
                           entry_stop=(batch_start_index+batch_size),
                           verbose=False
                 )
-
+                '''
+                print("Loaded fields:")
+                print(sorted(events[key].fields))
+                print("Has SecondaryVertices_mass?", "SecondaryVertices_mass" in events[key].fields)
+                '''
                 # do object selection
                 # note: put before adding new variables for speed,
                 # but assumes that the selection does not depend on new variables.
@@ -126,6 +160,39 @@ if __name__=='__main__':
                             do_add_variables=False,
                             batch_size=1000)
                 batch_scores.append(scores)
+
+                for score_name, score_array in scores.items():
+                    events[key][score_name] = score_array
+
+                '''
+                print(type(scores))
+                for k, v in scores.items():
+                    print(k, type(v), getattr(v, "shape", None))
+
+                print(type(events[key]))
+                print(events[key].fields)
+                print(ak.num(events[key]["Jets_pt"]))
+                '''
+
+                safe_fields = []
+                for field in events[key].fields:
+                    if field.startswith("JetsConstituents_"):
+                        continue
+                    if field.startswith("SecondaryVertices_"):
+                        continue
+                    if field.startswith("V0Candidates_"):
+                        continue
+                    safe_fields.append(field)
+
+                outdict = {field: events[key][field] for field in safe_fields}
+
+                #outdict = {field: events[key][field] for field in events[key].fields}
+                batch_outputfile = os.path.join(
+                args.outputdir,
+                os.path.basename(file).replace('.root', f'_batch{bidx}.root')
+                )
+                with uproot.recreate(batch_outputfile) as fout:
+                    fout[args.treename] = outdict
 
             # concatenate batches
             scores = {score_name: np.concatenate([batch[score_name] for batch in batch_scores])

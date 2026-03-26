@@ -15,10 +15,10 @@ if __name__=='__main__':
 
     # settings
     modeltag = '20260305_withnewks_withdedx_masked_standardized'
-    ntupletag = 'withnewks'
-    model = os.path.abspath(f'models/output_{modeltag}/model.onnx')
+    ntupletag = 'withks'
+    model = f'/eos/user/l/llambrec/aleph-data/models/output_{modeltag}/model.onnx'
     preprocess = model.replace('model.onnx', 'preprocess.json')
-    outputdir = f'/eos/user/l/llambrec/aleph-data/model_output_scores/output_scores_model_{modeltag}'
+    outputdir = f'/eos/user/z/zima/aleph-data/output_scores_model_{modeltag}'
     runmode = 'condor'
     resubmit = True
     ntuplename = f'ntuples-{ntupletag}' if ntupletag is not None else 'ntuples'
@@ -44,7 +44,7 @@ if __name__=='__main__':
     if resubmit:
         resubmit_files = []
         for inputfile in inputfiles:
-            outputfile = inputfile.replace('/','').replace('.root', '.pkl')
+            outputfile = inputfile.replace('/','').replace('.root', '_withscores.root')
             outputfile = os.path.join(outputdir, outputfile)
             if not os.path.exists(outputfile):
                 resubmit_files.append(inputfile)
@@ -90,7 +90,7 @@ if __name__=='__main__':
             print(cmd)
             os.system(cmd)
     elif runmode=='condor':
-        conda_activate = 'export PATH=/eos/user/l/llambrec/miniforge3/envs/weaver/bin:$PATH'
+        conda_activate = 'source /afs/cern.ch/user/z/zima/venvs/aleph-infer/bin/activate'
         ct.submitCommandsAsCondorCluster('cjob_inference', cmds,
           jobflavour='workday', conda_activate=conda_activate)
     elif runmode=='slurm':
