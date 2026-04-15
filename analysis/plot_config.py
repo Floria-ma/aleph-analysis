@@ -51,7 +51,7 @@ if __name__=='__main__':
         'sim': samples.get('sim', None),
         'data': samples.get('data', None),
         'variables': ['variables/variables_event.json'],
-        'outputdir': 'output_test2',
+        'outputdir': 'output_test3',
         'objectselection': ['selections/selection_Rb.json'],
         'eventselection': 'selections/selection.json',
         'year': '1994',
@@ -89,7 +89,7 @@ if __name__=='__main__':
             print(cmd)
             os.system(cmd)
     elif args.runmode=='condor':
-        env_script = os.path.abspath('../../../setup.sh')
+        env_script = os.path.abspath('../setup.sh')
         env_cmd = f'source {env_script}'
         for cmd in cmds:
             ct.submitCommandAsCondorJob('cjob_analysis', cmd,

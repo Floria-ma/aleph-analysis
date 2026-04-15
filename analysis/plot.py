@@ -33,7 +33,7 @@ from analysis.systematics import get_weight_variation
 from analysis.systematics import format_systematic_name
 from analysis.external_variables import read_external_variables
 from analysis.external_variables import find_external_files
-from analysis.thrust import add_thrust_variables
+from analysis.thrust import add_thrust_variables, theta_difference
 from plotting.plot import plot
 
 # global pyplot settings
@@ -117,7 +117,14 @@ def make_histograms(datastruct, variables,
                 "Jets_px", 
                 "Jets_py",
                 "Jets_pz",
+                "Jets_mass",
+                "Jets_e",
+                "Jets_theta",
                 "genEventType",
+                "Jets_score_isB",
+                "Jets_score_isC",
+                "Jets_score_isUDG",
+                "Jets_score_isS",
                 "SecondaryVertices_nTracks",
                 "SecondaryVertices_ndof",
                 "SecondaryVertices_dxy",
@@ -176,6 +183,7 @@ def make_histograms(datastruct, variables,
                     events = read_sampledict(batch_sampledict, treename=treename,
                                branches=this_branches_to_read, verbose=False)
                     events[process_key] = add_thrust_variables(events[process_key])
+                    events[process_key] = theta_difference(events[process_key])
                     print(sorted(events[process_key].fields))
 
                 else: events = {process_key: files}
@@ -379,6 +387,7 @@ def make_events(dtypedict,
             events[dtype][process_key] = read_sampledict(this_sampledict, treename=treename,
                                            branches=branches_to_read, verbose=False)[process_key]
             events[dtype][process_key] = add_thrust_variables(events[dtype][process_key])
+            events[dtype][process_key] = theta_difference(events[dtype][process_key])
             nevents = len(events[dtype][process_key])
             nbranches = len(events[dtype][process_key].fields)
             print(f'Read sample with {nevents} entries and {nbranches} branches.')

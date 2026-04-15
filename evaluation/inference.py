@@ -69,22 +69,9 @@ if __name__=='__main__':
         "Jets_py",
         "Jets_pz",
         "genEventType",
-        "SecondaryVertices_nTracks",
-        "SecondaryVertices_ndof",
-        "SecondaryVertices_dxy",
-        "SecondaryVertices_dz",
-        "SecondaryVertices_xrel",
-        "SecondaryVertices_yrel",
-        "SecondaryVertices_zrel",
-        "SecondaryVertices_prel",
-        "SecondaryVertices_correctedMass",
-        "V0Candidates_mass",
-        "V0Candidates_nTracks",
-        "V0Candidates_ndof",
-        "V0Candidates_xrel",
-        "V0Candidates_yrel",
-        "V0Candidates_zrel",
-        "V0Candidates_prel",
+        "Jets_theta",
+        "recoEventType",
+        "Event_dmerge2",
     ]
     branches_to_read += extra_branches
     branches_to_read = list(set(branches_to_read))
@@ -204,7 +191,7 @@ if __name__=='__main__':
                 outputfile = os.path.join(args.outputdir+'/data', outputfile)
             else:
                 outputfile = os.path.join(args.outputdir+'/mc', outputfile)
-            os.makedirs(outdir, exist_ok=True)
-            outputfile = os.path.join(outdir, outputfile)
+            os.makedirs(args.outputdir, exist_ok=True)
+            outputfile = os.path.join(args.outputdir, outputfile)
             with open(outputfile, 'wb') as f:
                 pickle.dump(scores, f)

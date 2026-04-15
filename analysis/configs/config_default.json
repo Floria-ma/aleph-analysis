@@ -8,19 +8,19 @@
             "variables/variables_v0.json"
         ],
         "objectselection": [
-            "selections/selection_jets.json"
+            "selections/selection_Rb.json"
         ],
-        "outputdir": "output_test/general"
+        "outputdir": "output_test2/general"
     },
     "impact_parameters": {
         "variables": [
             "variables/variables_constituents_ip.json"
         ],
         "objectselection": [
-            "selections/selection_jets.json",
+            "selections/selection_Rb.json",
             "selections/selection_constituents_charged.json"
         ],
-        "outputdir": "output_test/impact_parameters"
+        "outputdir": "output_test2/impact_parameters"
     },
     "dedx": {
         "variables": [
@@ -28,10 +28,10 @@
             "variables/variables_constituents_pid.json"
         ],
         "objectselection": [
-            "selections/selection_jets.json",
+            "selections/selection_Rb.json",
             "selections/selection_constituents_dedx.json"
         ],
-        "outputdir": "output_test/dedx"
+        "outputdir": "output_test2/dedx"
     },
     "dedx-nopreselection": {
         "variables": [
@@ -39,40 +39,40 @@
             "variables/variables_constituents_pid.json"
         ],
         "objectselection": [
-            "selections/selection_jets.json"
+            "selections/selection_Rb.json"
         ],
-        "outputdir": "output_test/dedx-nopreselection"
+        "outputdir": "output_test2/dedx-nopreselection"
     },
     "v0": {
         "variables": [
             "variables/variables_v0.json"
         ],
         "objectselection": [
-            "selections/selection_jets.json",
+            "selections/selection_Rb.json",
             "selections/selection_v0cand_cospointing.json"
         ],
-        "outputdir": "output_test/v0"
+        "outputdir": "output_test2/v0"
     },
     "ks": {
         "variables": [
             "variables/variables_ks.json"
         ],
         "objectselection": [
-            "selections/selection_jets.json",
+            "selections/selection_Rb.json",
             "selections/selection_v0cand_cospointing.json",
             "selections/selection_v0cand_ksmass.json"
         ],
-        "outputdir": "output_test/ks"
+        "outputdir": "output_test2/ks"
     },
     "la": {
         "variables": [
             "variables/variables_la.json"
         ],
         "objectselection": [
-            "selections/selection_jets.json",
+            "selections/selection_Rb.json",
             "selections/selection_v0cand_cospointing.json",
             "selections/selection_v0cand_lamass.json"
         ],
-        "outputdir": "output_test/la"
+        "outputdir": "output_test2/la"
     }
 }

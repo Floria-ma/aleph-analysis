@@ -27,66 +27,39 @@
   "nbins": 60
 },
 {
-  "name": "jet_nconstituents",
-  "variable": "Jets_nConstituents",
-  "axtitle": "Jet number of constituents",
+  "name": "jet_score_isB",
+  "variable": "Jets_score_isB",
+  "axtitle": "Jets B score",
   "unit": "",
-  "xlow": -0.5,
-  "xhigh": 50.5,
-  "nbins": 51
+  "xlow": 0,
+  "xhigh": 1,
+  "nbins": 50
 },
 {
-  "name": "jet_nphoton",
-  "variable": "Jets_nPhoton",
-  "axtitle": "Jet number of photons",
+  "name": "jet_score_isC",
+  "variable": "Jets_score_isC",
+  "axtitle": "Jets C score",
   "unit": "",
-  "xlow": -0.5,
-  "xhigh": 20.5,
-  "nbins": 21
+  "xlow": 0,
+  "xhigh": 1,
+  "nbins": 50
 },
 {
-  "name": "jet_nchargedhad",
-  "variable": "Jets_nChargedHad",
-  "axtitle": "Jet number of charged hadrons",
+  "name": "jet_score_isUDG",
+  "variable": "Jets_score_isUDG",
+  "axtitle": "Jets UDG score",
   "unit": "",
-  "xlow": -0.5,
-  "xhigh": 25.5,
-  "nbins": 26
+  "xlow": 0,
+  "xhigh": 1,
+  "nbins": 50
 },
 {
-  "name": "jet_nneutralhad",
-  "variable": "Jets_nNeutralHad",
-  "axtitle": "Jet number of neutral hadrons",
+  "name": "jet_score_isS",
+  "variable": "Jets_score_isS",
+  "axtitle": "Jets S score",
   "unit": "",
-  "xlow": -0.5,
-  "xhigh": 15.5,
-  "nbins": 16
-},
-{
-  "name": "jet_nel",
-  "variable": "Jets_nEl",
-  "axtitle": "Jet number of electrons",
-  "unit": "",
-  "xlow": -0.5,
-  "xhigh": 4.5,
-  "nbins": 5
-},
-{
-  "name": "jet_nmu",
-  "variable": "Jets_nMu",
-  "axtitle": "Jet number of muons",
-  "unit": "",
-  "xlow": -0.5,
-  "xhigh": 3.5,
-  "nbins": 4
-},
-{
-  "name": "jet_nsv",
-  "variable": "Jets_nSV",
-  "axtitle": "Number of secondary vertices per jet",
-  "unit": "",
-  "xlow": -0.5,
-  "xhigh": 5.5,
-  "nbins": 6
-}
+  "xlow": 0,
+  "xhigh": 1,
+  "nbins": 50
+}   
 ]

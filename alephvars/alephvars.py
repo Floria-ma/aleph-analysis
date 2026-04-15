@@ -154,3 +154,38 @@ def mass_ipsig_prob(ipsig, track_vectors, prob=None, threshold=1.8):
             res[jetidx] = prob[jetidx, ids[jetidx]]
 
     return res
+
+def unit(v):
+    n = np.linalg.norm(v)
+    if n == 0:
+        return v
+    return v/n
+
+def p_vec(px, py, pz):
+    return np.array([px, py, pz])
+
+def thrust_value(axis, momentum):
+    axis = unit(axis)
+    num = sum(abs(np.dot(p, axis)) for p in momentum)
+    den = sum(np.linalg.norm(p) for p in momentum)
+    return 0.0 if den == 0 else num / den
+
+def thrust_axis(momentum):
+    """
+    momentum: list/array of 3-vectors, shape (N, 3)
+    returns: (best_axis, best_thrust)
+    """
+    best_axis = None
+    best_thrust = -1.0
+
+    # use particle directions as candidate axes
+    for p in momentum:
+        if np.linalg.norm(p) == 0:
+            continue
+        for axis in (unit(p), -unit(p)):
+            t = thrust_value(axis, momentum)
+            if t > best_thrust:
+                best_thrust = t
+                best_axis = axis
+
+    return best_axis, best_thrust

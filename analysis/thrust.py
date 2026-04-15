@@ -13,6 +13,7 @@ def unit(v):
 def p_vec(px, py, pz):
     return np.array([px, py, pz])
 
+# for each particle's direction, compute the thrust value as abs(all particles' momentum dot that direction) / (sum of all particles' momentum magnitudes)
 def thrust_value(axis, momentum):
     axis = unit(axis)
     num = sum(abs(np.dot(p, axis)) for p in momentum)
@@ -20,10 +21,7 @@ def thrust_value(axis, momentum):
     return 0.0 if den == 0 else num / den
 
 def thrust_axis(momentum):
-    """
-    momentum: list/array of 3-vectors, shape (N, 3)
-    returns: (best_axis, best_thrust)
-    """
+
     momentum = np.asarray(momentum, dtype=float)
 
     if len(momentum) == 0:
@@ -36,12 +34,11 @@ def thrust_axis(momentum):
     for p in momentum:
         if np.linalg.norm(p) == 0:
             continue
-        found_nonzero = True
-        for axis in (unit(p), -unit(p)):
-            t = thrust_value(axis, momentum)
-            if t > best_thrust:
-                best_thrust = t
-                best_axis = axis
+        axis = unit(p)
+        t = thrust_value(axis, momentum)
+        if t > best_thrust:
+            best_thrust = t
+            best_axis = axis
 
     if not found_nonzero:
         return np.zeros(3), 0.0
@@ -74,4 +71,14 @@ def add_thrust_variables(events):
     events = ak.with_field(events, ak.Array(thrust_y), "Event_thrust_y")
     events = ak.with_field(events, ak.Array(thrust_z), "Event_thrust_z")
     events = ak.with_field(events, ak.Array(costhrust), "Event_costhrust")
+    return events
+
+def theta_difference(events):
+    thrust_costheta = np.abs(events["Event_thrust_z"])
+    jet_costheta = np.abs(np.cos(events["Jets_theta"]))
+
+    diff = np.abs(thrust_costheta - jet1_costheta)
+
+    events = ak.with_field(events, diff, "thrust_jets_costheta_diff")
+
     return events

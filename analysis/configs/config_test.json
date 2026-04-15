@@ -5,8 +5,8 @@
             "variables/variables_jets.json"
         ],
         "objectselection": [
-            "selections/selection_jets.json"
+            "selections/selection_Rb.json"
         ],
-        "outputdir": "output_test/test"
+        "outputdir": "output_test3/test"
     }
 }
