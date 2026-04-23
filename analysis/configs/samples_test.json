@@ -1,4 +1,4 @@
 {
-    "sim": ["/eos/user/z/zima/aleph-data/eos/user/z/zima/aleph-data/ntuples_with_attached_scores_20260305_withnewks_withdedx_masked_standardized/output_qqb_*.root"],
-    "data": ["/eos/user/z/zima/aleph-data/eos/user/z/zima/aleph-data/ntuples_with_attached_scores_20260305_withnewks_withdedx_masked_standardized/output_data_*.root"]
+    "sim": ["/eos/user/z/zima/aleph-data/ntuples_with_attached_scores_20260305_withnewks_withdedx_masked_standardized/output_qqb_*.root"],
+    "data": ["/eos/user/z/zima/aleph-data/ntuples_with_attached_scores_20260305_withnewks_withdedx_masked_standardized/output_data_*.root"]
 }

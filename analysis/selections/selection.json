@@ -4,6 +4,6 @@
     "Event_dmerge2 / np.square(91.2) < 0.13",
     "np.abs(Event_costhrust) < 0.65",
     "ak.sum(Jets_nChargedHad, axis=1) >= 5",
-    "ak.num(Jets_pt, axis=1) >= 2"
+    "ak.num(Jets_pt)>=2"
   ]
 }

@@ -8,25 +8,10 @@ import uproot
 
 
 def load_scores(score_file):
-    """
-    Load score arrays from a .pkl, .npz, or .npy file.
 
-    Supported formats:
-      - pkl: dict of {score_name: awkward array or numpy array}
-      - npz: named numpy arrays
-      - npy: single numpy array (named 'score')
-    """
     if score_file.endswith(".pkl"):
         with open(score_file, "rb") as f:
             scores = pickle.load(f)
-
-    elif score_file.endswith(".npz"):
-        data = np.load(score_file)
-        scores = {k: data[k] for k in data.files}
-
-    elif score_file.endswith(".npy"):
-        arr = np.load(score_file)
-        scores = {"score": arr}
 
     else:
         raise ValueError(f"Unsupported score file format: {score_file}")
@@ -42,15 +27,11 @@ def check_structure(arr):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--input", required=True, help="Input ROOT file")
-    parser.add_argument("-s", "--scores", required=True, help="Score file (.pkl/.npz/.npy)")
-    parser.add_argument("-t", "--treename", required=True, help="Tree name in ROOT file")
-    parser.add_argument("-o", "--output", required=True, help="Output ROOT file")
-    parser.add_argument(
-        "--jet-branch",
-        default="Jets_pt",
-        help="A jagged per-jet branch used to recover jet structure (default: Jets_pt)"
-    )
+    parser.add_argument("-i", "--input", required=True, help="input ROOT file")
+    parser.add_argument("-s", "--scores", required=True, help="score file (.pkl)")
+    parser.add_argument("-t", "--treename", required=True, help="tree name in ROOT file")
+    parser.add_argument("-o", "--output", required=True, help="output ROOT file")
+    parser.add_argument( "--jet-branch", default="Jets_pt", help="check jet structure")
     args = parser.parse_args()
 
     print(f"[INFO] Reading ROOT file: {args.input}")
@@ -86,7 +67,7 @@ def main():
             if not ak.all(score_jets_per_event == jets_per_event):
                 mismatch = ak.where(score_jets_per_event != jets_per_event)[0][:10]
                 raise ValueError(
-                    f"Score array '{score_name}' does not match jet multiplicity. "
+                    f"Score array '{score_name}' does not match number of jets. "
                     f"First mismatches: {mismatch}"
                 )
 

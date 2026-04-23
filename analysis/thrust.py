@@ -21,7 +21,6 @@ def thrust_value(axis, momentum):
     return 0.0 if den == 0 else num / den
 
 def thrust_axis(momentum):
-
     momentum = np.asarray(momentum, dtype=float)
 
     if len(momentum) == 0:
@@ -34,8 +33,11 @@ def thrust_axis(momentum):
     for p in momentum:
         if np.linalg.norm(p) == 0:
             continue
+
+        found_nonzero = True
         axis = unit(p)
         t = thrust_value(axis, momentum)
+
         if t > best_thrust:
             best_thrust = t
             best_axis = axis
@@ -77,7 +79,7 @@ def theta_difference(events):
     thrust_costheta = np.abs(events["Event_thrust_z"])
     jet_costheta = np.abs(np.cos(events["Jets_theta"]))
 
-    diff = np.abs(thrust_costheta - jet1_costheta)
+    diff = np.abs(thrust_costheta - jet_costheta)
 
     events = ak.with_field(events, diff, "thrust_jets_costheta_diff")
 

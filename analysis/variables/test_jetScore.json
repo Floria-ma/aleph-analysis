@@ -1,0 +1,65 @@
+[
+{
+  "name": "jet_energy",
+  "variable": "Jets_e",
+  "axtitle": "jet energy",
+  "unit": "GeV",
+  "xlow": 10,
+  "xhigh": 70,
+  "nbins": 60
+},
+{
+  "name": "jet_score_isB",
+  "variable": "Jets_score_isB",
+  "axtitle": "jet B score",
+  "unit": "",
+  "xlow": 0,
+  "xhigh": 1,
+  "nbins": 50
+},
+{ 
+  "name": "jet_score_isC",
+  "variable": "Jets_score_isC",
+  "axtitle": "jet C score",
+  "unit": "",
+  "xlow": 0,
+  "xhigh": 1,
+  "nbins": 50
+},
+{ 
+  "name": "jet_score_isS",
+  "variable": "Jets_score_isS",
+  "axtitle": "jet S score",
+  "unit": "",
+  "xlow": 0,
+  "xhigh": 1,
+  "nbins": 50
+},
+{
+  "name": "jet_score_isUDG",
+  "variable": "Jets_score_isUDG",
+  "axtitle": "jet UDG score",
+  "unit": "",
+  "xlow": 0,
+  "xhigh": 1,
+  "nbins": 50
+},
+{
+  "name": "score_isB",
+  "variable": "ak.prod(Jets_score_isB, axis=1)",
+  "axtitle": "Event classifier $b\\bar{b}$ score",
+  "unit": "",
+  "xlow": 0,
+  "xhigh": 1,
+  "nbins": 50
+},
+{ 
+  "name": "score_isC",
+  "variable": "ak.prod(Jets_score_isC, axis=1)",
+  "axtitle": "Event classifier $c\\bar{c}$ score",
+  "unit": "",
+  "xlow": 0,
+  "xhigh": 1,
+  "nbins": 50
+}
+]

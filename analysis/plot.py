@@ -34,6 +34,7 @@ from analysis.systematics import format_systematic_name
 from analysis.external_variables import read_external_variables
 from analysis.external_variables import find_external_files
 from analysis.thrust import add_thrust_variables, theta_difference
+from analysis.categorization import category, compute_epsilons_and_rhos
 from plotting.plot import plot
 
 # global pyplot settings
@@ -235,6 +236,45 @@ def make_histograms(datastruct, variables,
                         events[process_key] = events[process_key][mask]
                         nselected = len(events[process_key])
                         print(f'Selected {nselected} out of {nbefore} entries.')
+                
+                counts, effs, n_2jet, categorized_events = category(events[process_key])
+                print(f'\nCategory summary for {dtype} / {process_key}:')
+                print(f'  Number of selected 2-jet events = {n_2jet}')
+                for cat in counts:
+                    print(f'  {cat:>2}: N = {counts[cat]:6d}, eff = {effs[cat]:.6f}')
+                print('')
+
+                if dtype=='sim':
+                    eps, pair_prob, rho, corr_counts = compute_epsilons_and_rhos(events[process_key])
+
+                    print(f'Correlation inputs for {dtype} / {process_key}:')
+                    print(f'  n_events = {corr_counts["n_events"]}')
+                    print(f'  n_jets   = {corr_counts["n_jets"]}')
+
+                    print('  Single-jet efficiencies:')
+                    for flav in ("b", "c", "x"):
+                        print(f'    flavor {flav}:')
+                        for tag in ("Q", "S", "L", "C", "X", "U"):
+                            print(f'      eps[{flav}][{tag}] = {eps[flav][tag]:.6f}')
+
+                    print('  Pair probabilities and correlations:')
+                    pair_order = [
+                        "QQ", "SS", "LL", "CC", "XX",
+                        "QS", "LQ", "CQ", "QX",
+                        "LS", "CS", "SX",
+                        "CL", "LX",
+                        "CX",
+                        "QU", "SU", "LU", "CU", "UX"
+                    ]
+                    for flav in ("b", "c", "x"):
+                        print(f'    flavor {flav}:')
+                        for pair in pair_order:
+                            print(
+                                f'      {pair}: '
+                                f'P = {pair_prob[flav][pair]:.6f}, '
+                                f'rho = {rho[flav][pair]}'
+                            )
+                    print('')
 
                 # recalculate regions
                 this_regions = regions
@@ -434,6 +474,16 @@ def make_events(dtypedict,
                     events[dtype][process_key] = events[dtype][process_key][mask]
                     nselected = len(events[dtype][process_key])
                     print(f'Selected {nselected} out of {norig} entries.')
+
+            # print category yields and efficiencies
+            counts, effs, n_2jet, categorized_events = category(events[dtype][process_key])
+
+            print(f'\nCategory summary for {dtype} / {process_key}:')
+            print(f'  Number of selected 2-jet events = {n_2jet}')
+            for cat in counts:
+                print(f'  {cat:>2}: N = {counts[cat]:6d}, eff = {effs[cat]:.6f}')
+            print('')
+
 
             # recalculate regions
             if regions is not None and recalculate_regions:
