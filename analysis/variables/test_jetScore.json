@@ -61,5 +61,14 @@
   "xlow": 0,
   "xhigh": 1,
   "nbins": 50
-}
+},
+{
+  "name": "jet_theta_thrust_difference",
+  "variable": "thrust_jets_costheta_diff",
+  "axtitle": "Jet theta-thrust difference",
+  "unit": "",
+  "xlow": 0,
+  "xhigh": 1,
+  "nbins": 50
+}   
 ]

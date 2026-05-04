@@ -2,15 +2,15 @@ import numpy as np
 import awkward as ak
 from collections import defaultdict
 
-btagcut = [0.5, 0.7, 0.9]
+btagcut = [0.5, 0.7, 0.995]
 ctagcut = [0.4, 0.8]
 '''
 def jet_tag(b, c):
     # b regions first
     if btagcut[2] < b <= 1.0:
-        return "Q"   # 0.9 < b <= 1.0
+        return "Q"   # 0.995 < b <= 1.0
     elif btagcut[1] < b <= btagcut[2]:
-        return "S"   # 0.7 < b <= 0.9
+        return "S"   # 0.7 < b <= 0.995
     elif btagcut[0] < b <= btagcut[1]:
         return "L"   # 0.5 < b <= 0.7
 
@@ -52,7 +52,7 @@ def event_category(tag1, tag2):
     if pair in Regions:
         return pair
     return None
-
+'''
 def category(events):
     counts = {cat: 0 for cat in Regions}
     selected_events = {cat: [] for cat in Regions}
@@ -78,20 +78,59 @@ def category(events):
     for cat, n in counts.items():
         effs[cat] = n / n_2jet if n_2jet > 0 else 0.0
     return counts, effs, n_2jet, selected_events
+'''
 
-def compute_epsilons_and_rhos(events, tags=("Q", "S", "L", "C", "X", "U"), flavors=("b", "c", "x")):
+def category(events, weights=None):
+    counts = {cat: 0.0 for cat in Regions}
+    selected_events = {cat: [] for cat in Regions}
+    n_2jet = 0
+    sumw_2jet = 0.0
+    is_scalar_weight = weights is not None and np.isscalar(weights)
+    for i in range(len(events)):
+        px = ak.to_numpy(events["Jets_px"][i])
+        btag = ak.to_numpy(events["Jets_score_isB"][i])
+        ctag = ak.to_numpy(events["Jets_score_isC"][i])
+
+        if len(px) != 2:
+            continue
+        
+        if weights is None:
+            w = 1.0
+        elif is_scalar_weight:
+            w = float(weights)
+        else:
+            w = float(weights[i])
+
+        n_2jet += 1
+        sumw_2jet += w
+
+        t1 = jet_tag(btag[0], ctag[0])
+        t2 = jet_tag(btag[1], ctag[1])
+
+        cat = event_category(t1, t2)
+        if cat is not None:
+            counts[cat] += w
+            selected_events[cat].append(events[i])
+
+    effs = {}
+    for cat, y in counts.items():
+        effs[cat] = y / sumw_2jet if sumw_2jet > 0 else 0.0
+
+    return counts, effs, n_2jet, sumw_2jet, selected_events
+
+def compute_epsilons_and_rhos(events, weights=None, tags=("Q", "S", "L", "C", "X", "U"), flavors=("b", "c", "x"),verbose=True):
     tags = tuple(tags)
     flavors = tuple(flavors)
 
-    # only the 20 event categories you actually use
+    # 20 event categories
     pair_labels = sorted(Regions)
 
     n_events = defaultdict(int)
     n_jets = defaultdict(int)
     jet_tag_counts = {f: defaultdict(int) for f in flavors}
     pair_counts = {f: defaultdict(int) for f in flavors}
-
-    for ev in events:
+    is_scalar_weight = weights is not None and np.isscalar(weights)
+    for i, ev in enumerate(events):
         flav = ev["genEventType"]
         if flav == 5:
             f = "b"
@@ -106,6 +145,13 @@ def compute_epsilons_and_rhos(events, tags=("Q", "S", "L", "C", "X", "U"), flavo
         if len(btag) != 2 or len(ctag) != 2:
             continue
 
+        if weights is None:
+            w = 1.0
+        elif is_scalar_weight:
+            w = float(weights)
+        else:
+            w = float(weights[i])
+
         t1 = jet_tag(btag[0], ctag[0])
         t2 = jet_tag(btag[1], ctag[1])
 
@@ -118,17 +164,19 @@ def compute_epsilons_and_rhos(events, tags=("Q", "S", "L", "C", "X", "U"), flavo
         if pair is None:
             continue
 
-        n_events[f] += 1
-        n_jets[f] += 2
+        n_events[f] += w
+        n_jets[f] += 2 * w
 
-        jet_tag_counts[f][t1] += 1
-        jet_tag_counts[f][t2] += 1
-        pair_counts[f][pair] += 1
+        jet_tag_counts[f][t1] += w
+        jet_tag_counts[f][t2] += w
+        pair_counts[f][pair] += w
 
     eps = {f: {} for f in flavors}
+    eps_uncertainty = {f: {} for f in flavors}
     for f in flavors:
         for tag in tags:
             eps[f][tag] = jet_tag_counts[f][tag] / n_jets[f] if n_jets[f] > 0 else 0.0
+            eps_uncertainty[f][tag] = np.sqrt(jet_tag_counts[f][tag]*(n_jets[f]-jet_tag_counts[f][tag])/n_jets[f]**3)
 
     pair_prob = {f: {} for f in flavors}
     for f in flavors:
@@ -153,5 +201,71 @@ def compute_epsilons_and_rhos(events, tags=("Q", "S", "L", "C", "X", "U"), flavo
         "jet_tag_counts": {f: dict(jet_tag_counts[f]) for f in flavors},
         "pair_counts": {f: dict(pair_counts[f]) for f in flavors},
     }
+    if verbose:
+        for f in flavors:
+            print("------ for the rho numerator ------")
+            #print(f"n {f} events:", n_events[f])
+            for pair in pair_labels:
+                print(f"  {f}: {pair} -> {counts['pair_counts'][f][pair]}")
+            print("------ for the rho denominator ------")
+            #print(f"n {f} jets:", n_jets[f])
+            for pair in pair_labels:
+                i, j = pair[0], pair[1]
+                print(f"  {f}: {pair} -> tag I njets:{jet_tag_counts[f][i]}, tag J njets:{jet_tag_counts[f][j]} -> eps {eps[f][i]:.4f} {eps[f][j]:.4f}")
 
-    return eps, pair_prob, rho, counts
+
+    return eps, pair_prob, rho, counts, eps_uncertainty
+
+# Bootstrap resampling to estimate uncertainties on epsilons, and rhos
+def bootstrap_epsilons_and_rhos(events, weights=None, n_bootstrap=100,
+    tags=("Q", "S", "L", "C", "X", "U"), flavors=("b", "c", "x"), seed=12345):
+    
+    rng = np.random.default_rng(seed)
+    n_events_total = len(events)
+
+    eps_samples = []
+    rho_samples = []
+
+    for iboot in range(n_bootstrap):
+        boot_idx = rng.choice(n_events_total, size=n_events_total, replace=True)
+
+        # sample from events using the bootstrap indices
+        boot_events = events[boot_idx]
+
+        if weights is None:
+            boot_weights = None
+        elif np.isscalar(weights):
+            boot_weights = weights
+        else:
+            boot_weights = np.asarray(weights)[boot_idx]
+
+        # use the same function to compute epsilons, pair probabilities, and rhos for the bootstrap sample
+        eps_b, _, rho_b, _, _ = compute_epsilons_and_rhos(
+            boot_events,
+            weights=boot_weights,
+            tags=tags,
+            flavors=flavors,
+            verbose=False)
+
+        eps_samples.append(eps_b)
+        rho_samples.append(rho_b)
+
+    eps_boot_unc = {f: {} for f in flavors}
+    rho_boot_unc = {f: {} for f in flavors}
+
+    pair_labels = sorted(Regions)
+
+    for f in flavors:
+        # epsilon uncertainties from the bootstrap distribution
+        for tag in tags:
+            vals = np.array([sample[f][tag] for sample in eps_samples], dtype=float)
+            eps_boot_unc[f][tag] = np.std(vals, ddof=1)
+
+        # rho uncertainties from the bootstrap distribution
+        for pair in pair_labels:
+            vals = np.array([sample[f][pair] for sample 
+            in rho_samples if sample[f][pair] is not None], dtype=float)
+
+            rho_boot_unc[f][pair] = np.std(vals, ddof=1) if len(vals) > 1 else None
+
+    return eps_boot_unc, rho_boot_unc

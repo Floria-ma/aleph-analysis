@@ -55,9 +55,13 @@ def add_thrust_variables(events):
     costhrust = []
 
     for i in range(len(events)):
-        px = ak.to_numpy(events["Jets_px"][i])
-        py = ak.to_numpy(events["Jets_py"][i])
-        pz = ak.to_numpy(events["Jets_pz"][i])
+        px_nested = events["JetsConstituents_px"][i]
+        py_nested = events["JetsConstituents_py"][i]
+        pz_nested = events["JetsConstituents_pz"][i]
+
+        px = ak.to_numpy(ak.flatten(px_nested, axis=None))
+        py = ak.to_numpy(ak.flatten(py_nested, axis=None))
+        pz = ak.to_numpy(ak.flatten(pz_nested, axis=None))
 
         momenta = np.stack([px, py, pz], axis=1) if len(px) > 0 else np.zeros((0, 3))
         axis, thrust = thrust_axis(momenta)

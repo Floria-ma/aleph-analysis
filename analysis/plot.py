@@ -34,7 +34,7 @@ from analysis.systematics import format_systematic_name
 from analysis.external_variables import read_external_variables
 from analysis.external_variables import find_external_files
 from analysis.thrust import add_thrust_variables, theta_difference
-from analysis.categorization import category, compute_epsilons_and_rhos
+from analysis.categorization import category, compute_epsilons_and_rhos, bootstrap_epsilons_and_rhos
 from plotting.plot import plot
 
 # global pyplot settings
@@ -142,6 +142,9 @@ def make_histograms(datastruct, variables,
                 "V0Candidates_yrel",
                 "V0Candidates_zrel",
                 "V0Candidates_prel",
+                "JetsConstituents_px",
+                "JetsConstituents_py",
+                "JetsConstituents_pz",
             ]
             if do_read_events:
                 this_sampledict = {process_key: files}
@@ -236,45 +239,6 @@ def make_histograms(datastruct, variables,
                         events[process_key] = events[process_key][mask]
                         nselected = len(events[process_key])
                         print(f'Selected {nselected} out of {nbefore} entries.')
-                
-                counts, effs, n_2jet, categorized_events = category(events[process_key])
-                print(f'\nCategory summary for {dtype} / {process_key}:')
-                print(f'  Number of selected 2-jet events = {n_2jet}')
-                for cat in counts:
-                    print(f'  {cat:>2}: N = {counts[cat]:6d}, eff = {effs[cat]:.6f}')
-                print('')
-
-                if dtype=='sim':
-                    eps, pair_prob, rho, corr_counts = compute_epsilons_and_rhos(events[process_key])
-
-                    print(f'Correlation inputs for {dtype} / {process_key}:')
-                    print(f'  n_events = {corr_counts["n_events"]}')
-                    print(f'  n_jets   = {corr_counts["n_jets"]}')
-
-                    print('  Single-jet efficiencies:')
-                    for flav in ("b", "c", "x"):
-                        print(f'    flavor {flav}:')
-                        for tag in ("Q", "S", "L", "C", "X", "U"):
-                            print(f'      eps[{flav}][{tag}] = {eps[flav][tag]:.6f}')
-
-                    print('  Pair probabilities and correlations:')
-                    pair_order = [
-                        "QQ", "SS", "LL", "CC", "XX",
-                        "QS", "LQ", "CQ", "QX",
-                        "LS", "CS", "SX",
-                        "CL", "LX",
-                        "CX",
-                        "QU", "SU", "LU", "CU", "UX"
-                    ]
-                    for flav in ("b", "c", "x"):
-                        print(f'    flavor {flav}:')
-                        for pair in pair_order:
-                            print(
-                                f'      {pair}: '
-                                f'P = {pair_prob[flav][pair]:.6f}, '
-                                f'rho = {rho[flav][pair]}'
-                            )
-                    print('')
 
                 # recalculate regions
                 this_regions = regions
@@ -294,11 +258,69 @@ def make_histograms(datastruct, variables,
                         nominal_weights = np.multiply(nominal_weights, weight_values)
                 # ad-hoc case with provided lumi and cross-section
                 elif dtype=='sim':
-                    # note: this will not work in bachted mode,
+                    # note: this will not work in batched mode,
                     # normalization will be done incorrectly if more than 1 batch is used!
                     if xsections is not None and lumi is not None:
                         xsec = xsections[process_key]
                         nominal_weights = lumi * xsec / nevents[process_key]
+                '''
+                counts, effs, n_2jet, sumw_2jet, categorized_events = category(events[process_key])
+                print(f'\nCategory summary for {dtype} / {process_key}:')
+                print(f'  Number of selected 2-jet events = {n_2jet}')
+                for cat in counts:
+                    print(f'  {cat:>2}: N = {counts[cat]:6d}, eff = {effs[cat]:.6f}')
+                print('')
+                '''
+                if dtype == "sim":
+                    counts, effs, n_2jet, sumw_2jet, categorized_events = category(
+                        events[process_key], weights=nominal_weights
+                    )
+                    print(f'\nWeighted category summary for {dtype} / {process_key}:')
+                    print(f'  Number of selected 2-jet events (raw) = {n_2jet}')
+                    print(f'  Sum of selected 2-jet weights        = {sumw_2jet:.6f}')
+
+                    eps, pair_prob, rho, corr_counts, eps_uncertainty = compute_epsilons_and_rhos(events[process_key], weights=nominal_weights, verbose=True)
+                    #eps_boot_unc, rho_boot_unc = bootstrap_epsilons_and_rhos(events[process_key], weights=nominal_weights, n_bootstrap=1000)
+
+                    print(f'Correlation inputs for {dtype} / {process_key}:')
+                    print(f'  n_events = {corr_counts["n_events"]}')
+                    print(f'  n_jets   = {corr_counts["n_jets"]}')
+
+                    print('  Single-jet efficiencies:')
+                    for flav in ("b", "c", "x"):
+                        print(f'    flavor {flav}:')
+                        #for tag in ("Q", "S", "L", "C", "X", "U"):
+                            #print(f'   eps[{flav}][{tag}] = {eps[flav][tag]:.6f} with uncertainty {eps_uncertainty[flav][tag]:.6f} (bootstrap uncertainty {eps_boot_unc[flav][tag]:.6f})')
+
+                    print('  Pair probabilities and correlations:')
+                    pair_order = [
+                        "QQ", "SS", "LL", "CC", "XX",
+                        "QS", "LQ", "CQ", "QX",
+                        "LS", "CS", "SX",
+                        "CL", "LX",
+                        "CX",
+                        "QU", "SU", "LU", "CU", "UX"
+                    ]
+                    for flav in ("b", "c", "x"):
+                        print(f'    flavor {flav}:')
+                        for pair in pair_order:
+                            print(
+                                f'      {pair}: '
+                                f'P = {pair_prob[flav][pair]:.6f}, '
+                                #f'rho = {rho[flav][pair]} with bootstrap uncertainty {rho_boot_unc[flav][pair]:.6f}'
+                            )
+                    print('')
+                else:
+                    counts, effs, n_2jet, sumw_2jet, categorized_events = category(events[process_key])
+                    print(f'\nCategory summary for {dtype} / {process_key}:')
+                    print(f'  Number of selected 2-jet events = {n_2jet}')
+
+                for cat in counts:
+                    if dtype == "sim":
+                        print(f'  {cat:>2}: yield = {counts[cat]:10.3f}, frac = {effs[cat]:.6f}')
+                    else:
+                        print(f'  {cat:>2}: N = {int(counts[cat]):6d}, eff = {effs[cat]:.6f}')
+                print('')
 
                 # make masks for subprocesses
                 subprocess_masks = {process_key: np.ones(len(events[process_key])).astype(bool)}
