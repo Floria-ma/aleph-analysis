@@ -34,7 +34,7 @@ from analysis.systematics import format_systematic_name
 from analysis.external_variables import read_external_variables
 from analysis.external_variables import find_external_files
 from analysis.thrust import add_thrust_variables, theta_difference
-from analysis.categorization import category, compute_epsilons_and_rhos, bootstrap_epsilons_and_rhos
+from analysis.categorization import category, compute_epsilons_and_rhos
 from plotting.plot import plot
 
 # global pyplot settings
@@ -278,9 +278,8 @@ def make_histograms(datastruct, variables,
                     print(f'\nWeighted category summary for {dtype} / {process_key}:')
                     print(f'  Number of selected 2-jet events (raw) = {n_2jet}')
                     print(f'  Sum of selected 2-jet weights        = {sumw_2jet:.6f}')
-
-                    eps, pair_prob, rho, corr_counts, eps_uncertainty = compute_epsilons_and_rhos(events[process_key], weights=nominal_weights, verbose=True)
-                    #eps_boot_unc, rho_boot_unc = bootstrap_epsilons_and_rhos(events[process_key], weights=nominal_weights, n_bootstrap=1000)
+                    #eps, pair_prob, rho, counts, eps_uncertainty, eps_boot_unc, rho_boot_unc
+                    eps, pair_prob, rho, corr_counts, eps_uncertainty, eps_boot_unc, rho_boot_unc = compute_epsilons_and_rhos(events[process_key], weights=None, verbose=True)
 
                     print(f'Correlation inputs for {dtype} / {process_key}:')
                     print(f'  n_events = {corr_counts["n_events"]}')
@@ -289,8 +288,9 @@ def make_histograms(datastruct, variables,
                     print('  Single-jet efficiencies:')
                     for flav in ("b", "c", "x"):
                         print(f'    flavor {flav}:')
-                        #for tag in ("Q", "S", "L", "C", "X", "U"):
-                            #print(f'   eps[{flav}][{tag}] = {eps[flav][tag]:.6f} with uncertainty {eps_uncertainty[flav][tag]:.6f} (bootstrap uncertainty {eps_boot_unc[flav][tag]:.6f})')
+                        for tag in ("Q", "S", "L", "C", "X", "U"):
+                            print(f'   eps[{flav}][{tag}] = {eps[flav][tag]:.6f} with uncertainty {eps_uncertainty[flav][tag]:.6f} (bootstrap uncertainty {eps_boot_unc[flav][tag]:.6f})')
+                            #print(f' eps[{flav}][{tag}] = {eps[flav][tag]:.6f} with uncertainty {eps_uncertainty[flav][tag]:.6f}')
 
                     print('  Pair probabilities and correlations:')
                     pair_order = [
@@ -307,7 +307,8 @@ def make_histograms(datastruct, variables,
                             print(
                                 f'      {pair}: '
                                 f'P = {pair_prob[flav][pair]:.6f}, '
-                                #f'rho = {rho[flav][pair]} with bootstrap uncertainty {rho_boot_unc[flav][pair]:.6f}'
+                                f'rho = {rho[flav][pair]} with bootstrap uncertainty {rho_boot_unc[flav][pair]:.6f}'
+                                #f'rho = {rho[flav][pair]}'
                             )
                     print('')
                 else:
