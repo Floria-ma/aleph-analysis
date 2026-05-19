@@ -2,26 +2,21 @@ import numpy as np
 import awkward as ak
 from collections import defaultdict
 
-btagcut = [0.5, 0.7, 0.99]
-ctagcut = [0.4, 0.7]
-'''
-def jet_tag(b, c):
-    # b regions first
-    if btagcut[2] < b <= 1.0:
-        return "Q"   # 0.995 < b <= 1.0
-    elif btagcut[1] < b <= btagcut[2]:
-        return "S"   # 0.7 < b <= 0.995
-    elif btagcut[0] < b <= btagcut[1]:
-        return "L"   # 0.5 < b <= 0.7
+# optimize by efficiency
+#btagcut = [0.45, 0.9, 0.99]
+#ctagcut = [0.2, 0.6]
 
-    # only jets failing all b tags get tested for c/X/U
-    elif ctagcut[1] < c <= 1.0:
-        return "C"   # high c, but only for b <= 0.5
-    elif 0.0 <= c <= ctagcut[0]:
-        return "X"   # low b and low c
-    else:
-        return "U"   # untagged: low b and median c 
-'''
+# optimize by events number
+btagcut = [0.35, 0.9, 0.999]
+ctagcut = [0.55, 0.6]
+
+# eyeballing 
+#btagcut = [0.5, 0.7, 0.995]
+#ctagcut = [0.4, 0.8]
+
+#try new WPs
+#btagcut = [0.5, 0.7, 0.995]
+#ctagcut = [0.5, 0.9]
 
 def jet_tag(b, c):
     if btagcut[2] < b <= 1.0:
@@ -30,7 +25,7 @@ def jet_tag(b, c):
         return "S"   # medium b
     elif b <= btagcut[0] and ctagcut[1] < c <= 1.0:
         return "C"   # high-purity c, only in b veto region
-    elif b <= btagcut[0] and 0.0 <= c <= ctagcut[0]:
+    elif b <= btagcut[0] and c <= ctagcut[0]:
         return "X"   # b/c veto, only in b veto region
     elif btagcut[0] < b <= btagcut[1]:
         return "L"   # low-purity b
@@ -52,33 +47,6 @@ def event_category(tag1, tag2):
     if pair in Regions:
         return pair
     return None
-'''
-def category(events):
-    counts = {cat: 0 for cat in Regions}
-    selected_events = {cat: [] for cat in Regions}
-    n_2jet = 0
-    for i in range(len(events)):
-        px = ak.to_numpy(events["Jets_px"][i])
-        btag = ak.to_numpy(events["Jets_score_isB"][i])
-        ctag = ak.to_numpy(events["Jets_score_isC"][i])
-
-        if len(px) != 2:
-            continue
-
-        n_2jet += 1
-        t1 = jet_tag(btag[0], ctag[0])
-        t2 = jet_tag(btag[1], ctag[1])
-
-        cat = event_category(t1, t2)
-        if cat is not None:
-            counts[cat] += 1
-            selected_events[cat].append(events[i])
-
-    effs = {}
-    for cat, n in counts.items():
-        effs[cat] = n / n_2jet if n_2jet > 0 else 0.0
-    return counts, effs, n_2jet, selected_events
-'''
 
 def category(events, weights=None):
     counts = {cat: 0.0 for cat in Regions}
@@ -120,7 +88,8 @@ def category(events, weights=None):
 
 def compute_epsilons_and_rhos(events, weights=None, tags=("Q", "S", "L", "C", "X", "U"), 
                                 flavors=("b", "c", "x"), verbose=True,
-                                n_bootstrap=1000, seed=12345):
+                                n_bootstrap=500, seed=12345,
+                                optimize = True):
     tags = tuple(tags)
     flavors = tuple(flavors)
 
@@ -247,6 +216,8 @@ def compute_epsilons_and_rhos(events, weights=None, tags=("Q", "S", "L", "C", "X
 
 
     for iboot in range(n_bootstrap):
+        if n_bootstrap == 0:
+            break
         boot_idx = rng.choice(n_selected_events, size=n_selected_events, replace=True)
 
         boot_flavors = event_flavors[boot_idx]
@@ -334,60 +305,100 @@ def compute_epsilons_and_rhos(events, weights=None, tags=("Q", "S", "L", "C", "X
             )
             rho_boot_unc[f][pair] = np.std(vals, ddof=1) if len(vals) > 1 else None
 
+    if optimize:
+        #target definition
+        sig = {
+            "Q": "b",
+            "S": "b",
+            "L": "b",
+            "C": "c",
+            "X": "x",
+        }
+
+        #build arrays for optimization
+        b_scores = ak.to_numpy(ak.flatten(events["Jets_score_isB"]))
+        c_scores = ak.to_numpy(ak.flatten(events["Jets_score_isC"]))
+
+        
+        event_flavors = ak.to_numpy(events["genEventType"])
+        n_jets_per_event = ak.to_numpy(ak.num(events["Jets_score_isB"]))
+
+        #build the jet flavor array 
+        #1D array of jet flavors, repeated for each jet in the event
+        jet_type = np.repeat(event_flavors, n_jets_per_event)
+        jet_type = np.where(jet_type == 5, "b",
+                np.where(jet_type == 4, "c", "x"))
+
+        #function to compute the score for given btag and ctag cuts
+        def compute_score(b_scores, c_scores, jet_type):
+            #first assign all jets to "U", untagged
+            tag_name = np.full(len(b_scores), "U", dtype=object)
+            # high purity b tag
+            tag_name[(b_scores > btagcut[2])] = "Q"
+            # medium purity b tag
+            tag_name[(b_scores > btagcut[1]) & (b_scores <= btagcut[2])] = "S"
+            # high purity c tag, only for jets that fail the lowest b score
+            tag_name[(b_scores <= btagcut[0]) & (c_scores > ctagcut[1])] = "C"
+            # veto region for b and c tags
+            tag_name[(b_scores <= btagcut[0]) & (c_scores <= ctagcut[0])] = "X"
+            # low purity b tag
+            tag_name[(b_scores > btagcut[0]) & (b_scores <= btagcut[1])] = "L"
+
+            eps_local = {f: {} for f in flavors}
+
+            for f in flavors:
+                #count jets of flavor f, efficiency for each tag is n_tag / n_f
+                mask_f = (jet_type == f)
+                n_f = np.sum(mask_f)
+
+                #count jets of flavor f, tagged by tag I
+                for tag in tags:
+                    mask = mask_f & (tag_name == tag)
+                    n_tag = np.sum(mask)
+                    #eps_local[f][tag] = n_tag / n_f if n_f > 0 else 0.0
+                    #for now, directly use counts to compute score
+                    eps_local[f][tag] = n_tag 
+
+            # compute score
+            score = 0.0
+            for tag, flav in sig.items():
+                sig_val = eps_local[flav][tag]
+                bkg = sum(eps_local[f][tag] for f in flavors if f != flav)
+
+                if sig_val + bkg > 0:
+                    score += sig_val / np.sqrt(sig_val + bkg)
+                #score -= 0.5 * bkg
+
+            return score, eps_local
+
+        #scan WPs
+        best = None
+
+        for bL in np.linspace(0.3, 0.7, 9):
+            for bS in np.linspace(bL + 0.05, 0.9, 8):
+                for bQ in np.linspace(bS + 0.02, 0.999, 8):
+                    for cX in np.linspace(0.2, 0.6, 9):
+                        for cC in np.linspace(max(cX + 0.05, 0.6), 0.999, 8):
+
+                            btagcut[:] = [bL, bS, bQ]
+                            ctagcut[:] = [cX, cC]
+
+                            score, eps_local = compute_score(
+                                b_scores,
+                                c_scores,
+                                jet_type
+                            )
+
+                            if best is None or score > best["score"]:
+                                best = {
+                                    "score": score,
+                                    "bL": bL,
+                                    "bS": bS,
+                                    "bQ": bQ,
+                                    "cX": cX,
+                                    "cC": cC,
+                                    "eps": eps_local
+                                }
+        print("Best WP:", best)
+
     return eps, pair_prob, rho, counts, eps_uncertainty, eps_boot_unc, rho_boot_unc
-
-'''
-# Bootstrap resampling to estimate uncertainties on epsilons, and rhos
-def bootstrap_epsilons_and_rhos(events, weights=None, n_bootstrap=100,
-    tags=("Q", "S", "L", "C", "X", "U"), flavors=("b", "c", "x"), seed=12345):
-    
-    rng = np.random.default_rng(seed)
-    n_events_total = len(events)
-
-    eps_samples = []
-    rho_samples = []
-
-    for iboot in range(n_bootstrap):
-        boot_idx = rng.choice(n_events_total, size=n_events_total, replace=True)
-
-        # sample from events using the bootstrap indices
-        boot_events = events[boot_idx]
-
-        if weights is None:
-            boot_weights = None
-        elif np.isscalar(weights):
-            boot_weights = weights
-        else:
-            boot_weights = np.asarray(weights)[boot_idx]
-
-        # use the same function to compute epsilons, pair probabilities, and rhos for the bootstrap sample
-        eps_b, _, rho_b, _, _ = compute_epsilons_and_rhos(
-            boot_events,
-            weights=boot_weights,
-            tags=tags,
-            flavors=flavors,
-            verbose=False)
-
-        eps_samples.append(eps_b)
-        rho_samples.append(rho_b)
-
-    eps_boot_unc = {f: {} for f in flavors}
-    rho_boot_unc = {f: {} for f in flavors}
-
-    pair_labels = sorted(Regions)
-
-    for f in flavors:
-        # epsilon uncertainties from the bootstrap distribution
-        for tag in tags:
-            vals = np.array([sample[f][tag] for sample in eps_samples], dtype=float)
-            eps_boot_unc[f][tag] = np.std(vals, ddof=1)
-
-        # rho uncertainties from the bootstrap distribution
-        for pair in pair_labels:
-            vals = np.array([sample[f][pair] for sample 
-            in rho_samples if sample[f][pair] is not None], dtype=float)
-
-            rho_boot_unc[f][pair] = np.std(vals, ddof=1) if len(vals) > 1 else None
-
-    return eps_boot_unc, rho_boot_unc
-'''
