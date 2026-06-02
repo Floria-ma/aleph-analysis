@@ -6,9 +6,14 @@ from collections import defaultdict
 #btagcut = [0.45, 0.9, 0.99]
 #ctagcut = [0.2, 0.6]
 
+# hyperopt optimization
+btagcut = [0.31, 0.82, 0.95]
+ctagcut = [0.12, 0.68]
+
+
 # optimize by events number
-btagcut = [0.35, 0.9, 0.999]
-ctagcut = [0.55, 0.6]
+#btagcut = [0.35, 0.9, 0.999]
+#ctagcut = [0.55, 0.6]
 
 # eyeballing 
 #btagcut = [0.5, 0.7, 0.995]
@@ -48,9 +53,9 @@ def event_category(tag1, tag2):
         return pair
     return None
 
-def category(events, weights=None):
+def category(events, weights=None, keep_selected_events=False):
     counts = {cat: 0.0 for cat in Regions}
-    selected_events = {cat: [] for cat in Regions}
+    selected_events = {cat: [] for cat in Regions} if keep_selected_events else None
     n_2jet = 0
     sumw_2jet = 0.0
     is_scalar_weight = weights is not None and np.isscalar(weights)
@@ -78,7 +83,8 @@ def category(events, weights=None):
         cat = event_category(t1, t2)
         if cat is not None:
             counts[cat] += w
-            selected_events[cat].append(events[i])
+            if keep_selected_events:
+                selected_events[cat].append(events[i])
 
     effs = {}
     for cat, y in counts.items():
@@ -162,7 +168,15 @@ def compute_epsilons_and_rhos(events, weights=None, tags=("Q", "S", "L", "C", "X
     for f in flavors:
         for tag in tags:
             eps[f][tag] = jet_tag_counts[f][tag] / n_jets[f] if n_jets[f] > 0 else 0.0
-            eps_uncertainty[f][tag] = np.sqrt(jet_tag_counts[f][tag]*(n_jets[f]-jet_tag_counts[f][tag])/n_jets[f]**3)
+            eps_uncertainty[f][tag] = (
+                np.sqrt(
+                    jet_tag_counts[f][tag]
+                    * (n_jets[f] - jet_tag_counts[f][tag])
+                    / n_jets[f] ** 3
+                )
+                if n_jets[f] > 0
+                else 0.0
+            )
 
     pair_prob = {f: {} for f in flavors}
     for f in flavors:
@@ -199,111 +213,102 @@ def compute_epsilons_and_rhos(events, weights=None, tags=("Q", "S", "L", "C", "X
                 i, j = pair[0], pair[1]
                 print(f"  {f}: {pair} -> tag I njets:{jet_tag_counts[f][i]}, tag J njets:{jet_tag_counts[f][j]} -> eps {eps[f][i]:.4f} {eps[f][j]:.4f}")
 
-    event_flavors = np.array(event_flavors)
-    event_tag1 = np.array(event_tag1)
-    event_tag2 = np.array(event_tag2)
-    event_pairs = np.array(event_pairs)
+    flavor_index = {flavor: index for index, flavor in enumerate(flavors)}
+    tag_index = {tag: index for index, tag in enumerate(tags)}
+    pair_index = {pair: index for index, pair in enumerate(pair_labels)}
+
+    event_flavors = np.array([flavor_index[f] for f in event_flavors], dtype=np.int64)
+    event_tag1 = np.array([tag_index[tag] for tag in event_tag1], dtype=np.int64)
+    event_tag2 = np.array([tag_index[tag] for tag in event_tag2], dtype=np.int64)
+    event_pairs = np.array([pair_index[pair] for pair in event_pairs], dtype=np.int64)
     event_weights = np.array(event_weights, dtype=float)
 
     n_selected_events = len(event_flavors)
     eps_boot_unc = {f: {} for f in flavors}
     rho_boot_unc = {f: {} for f in flavors}
 
-    rng = np.random.default_rng(seed)
-
-    eps_samples = []
-    rho_samples = []
-
-
-    for iboot in range(n_bootstrap):
-        if n_bootstrap == 0:
-            break
-        boot_idx = rng.choice(n_selected_events, size=n_selected_events, replace=True)
-
-        boot_flavors = event_flavors[boot_idx]
-        boot_tag1 = event_tag1[boot_idx]
-        boot_tag2 = event_tag2[boot_idx]
-        boot_pairs = event_pairs[boot_idx]
-        boot_weights = event_weights[boot_idx]
-
-        boot_n_events = defaultdict(float)
-        boot_n_jets = defaultdict(float)
-        boot_jet_tag_counts = {f: defaultdict(float) for f in flavors}
-        boot_pair_counts = {f: defaultdict(float) for f in flavors}
-
-        for f, t1, t2, pair, w in zip(
-            boot_flavors,
-            boot_tag1,
-            boot_tag2,
-            boot_pairs,
-            boot_weights,
-        ):
-            boot_n_events[f] += w
-            boot_n_jets[f] += 2.0 * w
-
-            boot_jet_tag_counts[f][t1] += w
-            boot_jet_tag_counts[f][t2] += w
-            boot_pair_counts[f][pair] += w
-
-        boot_eps = {f: {} for f in flavors}
-        boot_pair_prob = {f: {} for f in flavors}
-        boot_rho = {f: {} for f in flavors}
-
-        for f in flavors:
-            for tag in tags:
-                boot_eps[f][tag] = (
-                    boot_jet_tag_counts[f][tag] / boot_n_jets[f]
-                    if boot_n_jets[f] > 0
-                    else 0.0
-                )
-
-            for pair in pair_labels:
-                boot_pair_prob[f][pair] = (
-                    boot_pair_counts[f][pair] / boot_n_events[f]
-                    if boot_n_events[f] > 0
-                    else 0.0
-                )
-
-                i, j = pair[0], pair[1]
-
-                if i == j:
-                    denom = boot_eps[f][i] ** 2
-                else:
-                    denom = 2.0 * boot_eps[f][i] * boot_eps[f][j]
-
-                boot_rho[f][pair] = (
-                    boot_pair_prob[f][pair] / denom - 1.0
-                    if denom > 0
-                    else None
-                )
-
-        eps_samples.append(boot_eps)
-        rho_samples.append(boot_rho)
-
-    # compute bootstrap uncertainties
-    if n_selected_events == 0:
+    if n_selected_events == 0 or n_bootstrap <= 1:
         for f in flavors:
             for tag in tags:
                 eps_boot_unc[f][tag] = None
             for pair in pair_labels:
                 rho_boot_unc[f][pair] = None
-        return eps, pair_prob, rho, counts, eps_uncertainty, eps_boot_unc, rho_boot_unc
+    else:
+        rng = np.random.default_rng(seed)
 
-    for f in flavors:
-        for tag in tags:
-            vals = np.array([sample[f][tag] for sample in eps_samples], dtype=float)
-            eps_boot_unc[f][tag] = np.std(vals, ddof=1)
+        n_flavors = len(flavors)
+        n_tags = len(tags)
+        n_pairs = len(pair_labels)
+        eps_samples = np.empty((n_bootstrap, n_flavors, n_tags), dtype=float)
+        rho_samples = np.full((n_bootstrap, n_flavors, n_pairs), np.nan, dtype=float)
 
-        for pair in pair_labels:
-            vals = np.array(
-                [
-                    sample[f][pair]
-                    for sample in rho_samples
-                    if sample[f][pair] is not None
-                ],
-                dtype=float,
+        for iboot in range(n_bootstrap):
+            boot_idx = rng.choice(n_selected_events, size=n_selected_events, replace=True)
+            boot_flavors = event_flavors[boot_idx]
+            boot_weights = event_weights[boot_idx]
+
+            boot_n_events = np.bincount(
+                boot_flavors,
+                weights=boot_weights,
+                minlength=n_flavors,
             )
-            rho_boot_unc[f][pair] = np.std(vals, ddof=1) if len(vals) > 1 else None
+            boot_n_jets = 2.0 * boot_n_events
+
+            jet_flavors = np.concatenate([boot_flavors, boot_flavors])
+            jet_tags = np.concatenate([event_tag1[boot_idx], event_tag2[boot_idx]])
+            jet_weights = np.concatenate([boot_weights, boot_weights])
+            jet_tag_counts_flat = np.bincount(
+                jet_flavors * n_tags + jet_tags,
+                weights=jet_weights,
+                minlength=n_flavors * n_tags,
+            )
+            boot_jet_tag_counts = jet_tag_counts_flat.reshape(n_flavors, n_tags)
+
+            pair_counts_flat = np.bincount(
+                boot_flavors * n_pairs + event_pairs[boot_idx],
+                weights=boot_weights,
+                minlength=n_flavors * n_pairs,
+            )
+            boot_pair_counts = pair_counts_flat.reshape(n_flavors, n_pairs)
+
+            with np.errstate(divide="ignore", invalid="ignore"):
+                boot_eps_array = np.divide(
+                    boot_jet_tag_counts,
+                    boot_n_jets[:, None],
+                    out=np.zeros_like(boot_jet_tag_counts, dtype=float),
+                    where=boot_n_jets[:, None] > 0,
+                )
+                boot_pair_prob = np.divide(
+                    boot_pair_counts,
+                    boot_n_events[:, None],
+                    out=np.zeros_like(boot_pair_counts, dtype=float),
+                    where=boot_n_events[:, None] > 0,
+                )
+
+            eps_samples[iboot] = boot_eps_array
+
+            for ipair, pair in enumerate(pair_labels):
+                i = tag_index[pair[0]]
+                j = tag_index[pair[1]]
+                if i == j:
+                    denom = boot_eps_array[:, i] ** 2
+                else:
+                    denom = 2.0 * boot_eps_array[:, i] * boot_eps_array[:, j]
+                rho_samples[iboot, :, ipair] = np.divide(
+                    boot_pair_prob[:, ipair],
+                    denom,
+                    out=np.full(n_flavors, np.nan, dtype=float),
+                    where=denom > 0,
+                ) - 1.0
+
+        for iflavor, f in enumerate(flavors):
+            for itag, tag in enumerate(tags):
+                eps_boot_unc[f][tag] = np.std(eps_samples[:, iflavor, itag], ddof=1)
+
+            for ipair, pair in enumerate(pair_labels):
+                vals = rho_samples[:, iflavor, ipair]
+                vals = vals[np.isfinite(vals)]
+                rho_boot_unc[f][pair] = np.std(vals, ddof=1) if len(vals) > 1 else None
 
     if optimize:
         #target definition

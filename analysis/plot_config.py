@@ -50,15 +50,19 @@ if __name__=='__main__':
     base_args = {
         'sim': samples.get('sim', None),
         'data': samples.get('data', None),
-        'variables': ['variables/variables_event.json'],
-        'outputdir': 'output_test3',
-        'objectselection': ['selections/selection_Rb.json'],
+        'variables': ['variables/test_jetScore.json'],
+        'outputdir': 'output_test6',
+        'objectselection': ['selections/selection_jets.json'],
         'eventselection': 'selections/selection.json',
         'year': '1994',
         'xsections': 'cross-sections/cross_sections.json',
         'merge': 'merging/merging.json',
         'split': 'merging/splitting.json',
-        'dolog': True
+        'dolog': True,
+        "external_variables": (
+            "/eos/user/l/llambrec/aleph-data/model_output_scores/"
+            "output_scores_model_20260305_withnewks_withdedx_masked_standardized"
+        ),
     }
 
     # make commands based on config
@@ -66,7 +70,7 @@ if __name__=='__main__':
     for key, settings in config.items():
         this_args = base_args.copy()
         this_args.update(settings)
-        cmd = 'python plot.py'
+        cmd = 'python3 plot.py'
         # loop over arguments
         for arg, val in this_args.items():
             # parse argument

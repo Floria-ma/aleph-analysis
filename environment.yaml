@@ -30,6 +30,7 @@ dependencies:
   - graphite2=1.3.14=h295c915_1
   - harfbuzz=12.3.0=h79d275a_1
   - humanfriendly=10.0=py313h06a4308_2
+  - hyperopt
   - icu=73.1=h6a678d5_0
   - importlib-metadata=8.7.1=py313h06a4308_0
   - jpeg=9f=h5ce9db8_0

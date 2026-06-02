@@ -4,6 +4,7 @@ import os
 import sys
 import pickle
 import numpy as np
+import awkward as ak
 
 
 def find_external_files(input_files, external_variable_dir, verbose=False):
@@ -44,6 +45,10 @@ def read_external_variables(input_files, external_variable_dir):
     # concatenate results from all files
     external_variables = {}
     for key in variable_names:
-        external_variables[key] = np.concatenate([el[key] for el in temp])
+        values = [el[key] for el in temp]
+        if any(isinstance(value, ak.Array) for value in values):
+            external_variables[key] = ak.concatenate(values)
+        else:
+            external_variables[key] = np.concatenate(values)
     # return the result
     return external_variables

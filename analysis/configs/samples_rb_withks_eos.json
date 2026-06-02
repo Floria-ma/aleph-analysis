@@ -1,0 +1,8 @@
+{
+  "sim": [
+    "/eos/user/l/llambrec/aleph-data/ntuples-withks/eventlevel/mc/output_qqb_*.root"
+  ],
+  "data": [
+    "/eos/user/l/llambrec/aleph-data/ntuples-withks/eventlevel/data/output_data_*.root"
+  ]
+}
