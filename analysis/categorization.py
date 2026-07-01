@@ -7,9 +7,8 @@ from collections import defaultdict
 #ctagcut = [0.2, 0.6]
 
 # hyperopt optimization
-btagcut = [0.31, 0.82, 0.95]
-ctagcut = [0.12, 0.68]
-
+btagcut = [0.396, 0.601, 0.855]
+ctagcut = [0.524, 0.605]
 
 # optimize by events number
 #btagcut = [0.35, 0.9, 0.999]
@@ -46,6 +45,10 @@ Regions = {
     "QU", "SU", "LU", "CU", "UX"
 }
 
+TAG_LABELS = ("Q", "S", "L", "C", "X", "U")
+TAG_INDEX = {tag: index for index, tag in enumerate(TAG_LABELS)}
+
+
 #jets are not distinguishable 
 def event_category(tag1, tag2):
     pair = "".join(sorted([tag1, tag2]))
@@ -53,38 +56,76 @@ def event_category(tag1, tag2):
         return pair
     return None
 
+
+def _pair_labels():
+    return sorted(Regions)
+
+
+def _pair_lookup(tags, pair_labels):
+    tag_index = {tag: index for index, tag in enumerate(tags)}
+    pair_index = {pair: index for index, pair in enumerate(pair_labels)}
+    lookup = np.full((len(tags), len(tags)), -1, dtype=np.int64)
+    for tag1, index1 in tag_index.items():
+        for tag2, index2 in tag_index.items():
+            pair = event_category(tag1, tag2)
+            if pair in pair_index:
+                lookup[index1, index2] = pair_index[pair]
+    return lookup
+
+
+def _assign_tag_indices(btag, ctag):
+    tags = np.full(btag.shape, TAG_INDEX["U"], dtype=np.int64)
+    tags[(btag > btagcut[2]) & (btag <= 1.0)] = TAG_INDEX["Q"]
+    tags[(btag > btagcut[1]) & (btag <= btagcut[2])] = TAG_INDEX["S"]
+    tags[(btag <= btagcut[0]) & (ctag > ctagcut[1]) & (ctag <= 1.0)] = TAG_INDEX["C"]
+    tags[(btag <= btagcut[0]) & (ctag <= ctagcut[0])] = TAG_INDEX["X"]
+    tags[(btag > btagcut[0]) & (btag <= btagcut[1])] = TAG_INDEX["L"]
+    return tags
+
+
+def _two_jet_score_arrays(events, use_px=False):
+    mask = (ak.num(events["Jets_score_isB"]) == 2) & (ak.num(events["Jets_score_isC"]) == 2)
+    if use_px:
+        mask = mask & (ak.num(events["Jets_px"]) == 2)
+    selected = events[mask]
+    btag = ak.to_numpy(ak.flatten(selected["Jets_score_isB"], axis=None)).reshape(-1, 2)
+    ctag = ak.to_numpy(ak.flatten(selected["Jets_score_isC"], axis=None)).reshape(-1, 2)
+    return mask, selected, btag, ctag
+
+
+def _weights_for_mask(weights, mask, n_selected):
+    if weights is None:
+        return np.ones(n_selected, dtype=float)
+    if np.isscalar(weights):
+        return np.full(n_selected, float(weights), dtype=float)
+    return np.asarray(weights, dtype=float)[ak.to_numpy(mask)]
+
+
 def category(events, weights=None, keep_selected_events=False):
     counts = {cat: 0.0 for cat in Regions}
     selected_events = {cat: [] for cat in Regions} if keep_selected_events else None
-    n_2jet = 0
-    sumw_2jet = 0.0
-    is_scalar_weight = weights is not None and np.isscalar(weights)
-    for i in range(len(events)):
-        px = ak.to_numpy(events["Jets_px"][i])
-        btag = ak.to_numpy(events["Jets_score_isB"][i])
-        ctag = ak.to_numpy(events["Jets_score_isC"][i])
+    mask, selected, btag, ctag = _two_jet_score_arrays(events, use_px=True)
+    n_2jet = len(selected)
+    event_weights = _weights_for_mask(weights, mask, n_2jet)
+    sumw_2jet = float(np.sum(event_weights))
 
-        if len(px) != 2:
-            continue
-        
-        if weights is None:
-            w = 1.0
-        elif is_scalar_weight:
-            w = float(weights)
-        else:
-            w = float(weights[i])
+    if n_2jet > 0:
+        tags = _assign_tag_indices(btag, ctag)
+        pair_labels = _pair_labels()
+        pair_indices = _pair_lookup(TAG_LABELS, pair_labels)[tags[:, 0], tags[:, 1]]
+        valid_pairs = pair_indices >= 0
+        pair_counts = np.bincount(
+            pair_indices[valid_pairs],
+            weights=event_weights[valid_pairs],
+            minlength=len(pair_labels),
+        )
+        for index, cat in enumerate(pair_labels):
+            counts[cat] = float(pair_counts[index])
 
-        n_2jet += 1
-        sumw_2jet += w
-
-        t1 = jet_tag(btag[0], ctag[0])
-        t2 = jet_tag(btag[1], ctag[1])
-
-        cat = event_category(t1, t2)
-        if cat is not None:
-            counts[cat] += w
-            if keep_selected_events:
-                selected_events[cat].append(events[i])
+        if keep_selected_events:
+            original_indices = np.nonzero(ak.to_numpy(mask))[0]
+            for event_index, pair_index in zip(original_indices[valid_pairs], pair_indices[valid_pairs]):
+                selected_events[pair_labels[pair_index]].append(events[event_index])
 
     effs = {}
     for cat, y in counts.items():
@@ -100,68 +141,66 @@ def compute_epsilons_and_rhos(events, weights=None, tags=("Q", "S", "L", "C", "X
     flavors = tuple(flavors)
 
     # 20 event categories
-    pair_labels = sorted(Regions)
+    pair_labels = _pair_labels()
+    flavor_index = {flavor: index for index, flavor in enumerate(flavors)}
+    tag_index = {tag: index for index, tag in enumerate(tags)}
+
+    mask, selected, btag, ctag = _two_jet_score_arrays(events)
+    n_selected_initial = len(selected)
+    raw_tag_indices = _assign_tag_indices(btag, ctag)
+    raw_tag_labels = np.asarray(TAG_LABELS)[raw_tag_indices]
+
+    unknown_tags = sorted(set(raw_tag_labels.reshape(-1)) - set(tags))
+    if len(unknown_tags) > 0:
+        raise ValueError(f"Unknown jet tags {unknown_tags}")
+
+    gen_types = ak.to_numpy(selected["genEventType"])
+    flavor_labels = np.full(n_selected_initial, "x", dtype=object)
+    flavor_labels[gen_types == 5] = "b"
+    flavor_labels[gen_types == 4] = "c"
+    unknown_flavors = sorted(set(flavor_labels) - set(flavors))
+    if len(unknown_flavors) > 0:
+        raise ValueError(f"Unknown flavor(s) {unknown_flavors}")
+
+    event_flavors = np.array([flavor_index[f] for f in flavor_labels], dtype=np.int64)
+    event_tag1 = np.array([tag_index[tag] for tag in raw_tag_labels[:, 0]], dtype=np.int64)
+    event_tag2 = np.array([tag_index[tag] for tag in raw_tag_labels[:, 1]], dtype=np.int64)
+    event_pairs = _pair_lookup(tags, pair_labels)[event_tag1, event_tag2]
+    valid_pairs = event_pairs >= 0
+    event_flavors = event_flavors[valid_pairs]
+    event_tag1 = event_tag1[valid_pairs]
+    event_tag2 = event_tag2[valid_pairs]
+    event_pairs = event_pairs[valid_pairs]
+    event_weights = _weights_for_mask(weights, mask, n_selected_initial)[valid_pairs]
+
+    n_flavors = len(flavors)
+    n_tags = len(tags)
+    n_pairs = len(pair_labels)
+    n_events_array = np.bincount(event_flavors, weights=event_weights, minlength=n_flavors)
+    n_jets_array = 2.0 * n_events_array
+    jet_tag_counts_array = np.bincount(
+        np.concatenate([event_flavors, event_flavors]) * n_tags
+        + np.concatenate([event_tag1, event_tag2]),
+        weights=np.concatenate([event_weights, event_weights]),
+        minlength=n_flavors * n_tags,
+    ).reshape(n_flavors, n_tags)
+    pair_counts_array = np.bincount(
+        event_flavors * n_pairs + event_pairs,
+        weights=event_weights,
+        minlength=n_flavors * n_pairs,
+    ).reshape(n_flavors, n_pairs)
 
     n_events = defaultdict(float)
     n_jets = defaultdict(float)
     jet_tag_counts = {f: defaultdict(float) for f in flavors}
     pair_counts = {f: defaultdict(float) for f in flavors}
-    is_scalar_weight = weights is not None and np.isscalar(weights)
-
-    #event info for bootstrap
-    event_flavors = []
-    event_tag1 = []
-    event_tag2 = []
-    event_pairs = []
-    event_weights = []
-
-    for i, ev in enumerate(events):
-        flav = ev["genEventType"]
-        if flav == 5:
-            f = "b"
-        elif flav == 4:
-            f = "c"
-        else:
-            f = "x"
-        
-        if len(ev["Jets_score_isB"]) != 2 or len(ev["Jets_score_isC"]) != 2:
-            continue
-
-        btag = ak.to_numpy(ev["Jets_score_isB"])
-        ctag = ak.to_numpy(ev["Jets_score_isC"])
-
-        if weights is None:
-            w = 1.0
-        elif is_scalar_weight:
-            w = float(weights)
-        else:
-            w = float(weights[i])
-
-        t1 = jet_tag(btag[0], ctag[0])
-        t2 = jet_tag(btag[1], ctag[1])
-
-        if f not in flavors:
-            raise ValueError(f"Unknown flavor '{f}'")
-        if t1 not in tags or t2 not in tags:
-            raise ValueError(f"Unknown jet tags {(t1, t2)}")
-
-        pair = event_category(t1, t2)
-        if pair is None:
-            continue
-
-        n_events[f] += w
-        n_jets[f] += 2 * w
-
-        jet_tag_counts[f][t1] += w
-        jet_tag_counts[f][t2] += w
-        pair_counts[f][pair] += w
-
-        #bootstrap inputs
-        event_flavors.append(f)
-        event_tag1.append(t1)
-        event_tag2.append(t2)
-        event_pairs.append(pair)
-        event_weights.append(w)
+    for iflavor, flavor in enumerate(flavors):
+        n_events[flavor] = float(n_events_array[iflavor])
+        n_jets[flavor] = float(n_jets_array[iflavor])
+        for itag, tag in enumerate(tags):
+            jet_tag_counts[flavor][tag] = float(jet_tag_counts_array[iflavor, itag])
+        for ipair, pair in enumerate(pair_labels):
+            pair_counts[flavor][pair] = float(pair_counts_array[iflavor, ipair])
 
     eps = {f: {} for f in flavors}
     eps_uncertainty = {f: {} for f in flavors}
@@ -212,16 +251,6 @@ def compute_epsilons_and_rhos(events, weights=None, tags=("Q", "S", "L", "C", "X
             for pair in pair_labels:
                 i, j = pair[0], pair[1]
                 print(f"  {f}: {pair} -> tag I njets:{jet_tag_counts[f][i]}, tag J njets:{jet_tag_counts[f][j]} -> eps {eps[f][i]:.4f} {eps[f][j]:.4f}")
-
-    flavor_index = {flavor: index for index, flavor in enumerate(flavors)}
-    tag_index = {tag: index for index, tag in enumerate(tags)}
-    pair_index = {pair: index for index, pair in enumerate(pair_labels)}
-
-    event_flavors = np.array([flavor_index[f] for f in event_flavors], dtype=np.int64)
-    event_tag1 = np.array([tag_index[tag] for tag in event_tag1], dtype=np.int64)
-    event_tag2 = np.array([tag_index[tag] for tag in event_tag2], dtype=np.int64)
-    event_pairs = np.array([pair_index[pair] for pair in event_pairs], dtype=np.int64)
-    event_weights = np.array(event_weights, dtype=float)
 
     n_selected_events = len(event_flavors)
     eps_boot_unc = {f: {} for f in flavors}

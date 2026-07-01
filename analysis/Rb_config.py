@@ -47,8 +47,8 @@ def make_command(samples, settings):
         "skip_minos_for_variations": True,
         "output_json": "rb_result_hyperopt.json",
         "hyperopt_wp":True,
-        "hyperopt_n_bootstrap": 100,
-        "hyperopt_max_evals": 5,
+        "hyperopt_n_bootstrap": 200,
+        "hyperopt_max_evals": 100,
     }
     args.update(settings)
 

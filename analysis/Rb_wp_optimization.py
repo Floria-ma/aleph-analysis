@@ -67,7 +67,7 @@ class CachedRbArrays:
             selected_weights = np.ones(len(selected), dtype=float)
         else:
             selected_weights = np.asarray(weights, dtype=float)[mask]
-
+        # vectorized conversion to numpy arrays and dtype enforcement
         return cls(
             b_scores=np.asarray(b_scores, dtype=float),
             c_scores=np.asarray(c_scores, dtype=float),
@@ -450,6 +450,28 @@ def sanitize_wp(raw_wp):
         return None
     return wp
 
+# order the search parameters to ensure that the working point is valid and ordered correctly
+def ordered_wp_from_search_params(params):
+    eps = 1.0e-6
+
+    bL = float(params["bL"])
+    bS_min = max(0.55, bL + eps)
+    bS = bS_min + float(params["bS_frac"]) * (0.95 - bS_min)
+    bQ_min = max(0.85, bS + eps)
+    bQ = bQ_min + float(params["bQ_frac"]) * (0.999 - bQ_min)
+
+    cX = float(params["cX"])
+    cC_min = max(0.45, cX + eps)
+    cC = cC_min + float(params["cC_frac"]) * (0.999 - cC_min)
+
+    return {
+        "bL": bL,
+        "bS": bS,
+        "bQ": bQ,
+        "cX": cX,
+        "cC": cC,
+    }
+
 
 def optimize_working_points(
     cached,
@@ -470,16 +492,16 @@ def optimize_working_points(
 
     space = {
         "bL": hp.uniform("bL", 0.25, 0.75),
-        "bS": hp.uniform("bS", 0.55, 0.95),
-        "bQ": hp.uniform("bQ", 0.85, 0.999),
+        "bS_frac": hp.uniform("bS_frac", 0.0, 1.0),
+        "bQ_frac": hp.uniform("bQ_frac", 0.0, 1.0),
         "cX": hp.uniform("cX", 0.05, 0.65),
-        "cC": hp.uniform("cC", 0.45, 0.999),
+        "cC_frac": hp.uniform("cC_frac", 0.0, 1.0),
     }
 
     best_result = {"result": None}
 
     def objective(raw_wp):
-        wp = sanitize_wp(raw_wp)
+        wp = sanitize_wp(ordered_wp_from_search_params(raw_wp))
         if wp is None:
             return {"loss": 1.0e6, "status": STATUS_FAIL}
         try:
@@ -520,7 +542,7 @@ def optimize_working_points(
         rstate=rng,
         show_progressbar=False,
     )
-    best_wp = sanitize_wp(best)
+    best_wp = sanitize_wp(ordered_wp_from_search_params(best))
     if best_result["result"] is None and best_wp is not None:
         best_result["result"] = evaluate_wp_uncertainty(
             cached,

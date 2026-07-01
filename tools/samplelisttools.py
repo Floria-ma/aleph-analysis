@@ -115,25 +115,22 @@ def read_sampledict(sampledict, treename=None, branches=None,
                         msg += f' branch {branch} not found in {filename};'
                         msg += ' will skip reading this branch.'
                         print(msg)
-            #part = f.arrays(valid_branches, entry_start=entry_start, entry_stop=entry_stop,
-            #        library='ak')
-            print("FILE:", f.file.file_path if hasattr(f, "file") else f)
-            print("ENTRIES:", f.num_entries)
-            print("valid_branches:", valid_branches)
+            if verbose:
+                print("FILE:", f.file.file_path if hasattr(f, "file") else f)
+                print("ENTRIES:", f.num_entries)
+                print("valid_branches:", valid_branches)
 
-            bad_branches = []
-            for br in valid_branches:
-                try:
-                    part = f.arrays(
-                        valid_branches,
-                        entry_start=entry_start,
-                        entry_stop=entry_stop,
-                        library="ak"
-                    )
-                except Exception as e:
-                    print("Skipping bad file:", f.file.file_path if hasattr(f, "file") else f)
-                    print(repr(e))
-                    continue
+            try:
+                part = f.arrays(
+                    valid_branches,
+                    entry_start=entry_start,
+                    entry_stop=entry_stop,
+                    library="ak"
+                )
+            except Exception as e:
+                print("Skipping bad file:", f.file.file_path if hasattr(f, "file") else f)
+                print(repr(e))
+                continue
 
             #if bad_branches:
             #    raise RuntimeError(

@@ -293,7 +293,7 @@ def make_histograms(datastruct, variables,
                     print(f'  Number of selected 2-jet events (raw) = {n_2jet}')
                     print(f'  Sum of selected 2-jet weights        = {sumw_2jet:.6f}')
                     #eps, pair_prob, rho, counts, eps_uncertainty, eps_boot_unc, rho_boot_unc
-                    eps, pair_prob, rho, corr_counts, eps_uncertainty, eps_boot_unc, rho_boot_unc = compute_epsilons_and_rhos(events[process_key], n_bootstrap = 500, weights=None, verbose=True, optimize = False)
+                    eps, pair_prob, rho, corr_counts, eps_uncertainty, eps_boot_unc, rho_boot_unc = compute_epsilons_and_rhos(events[process_key], n_bootstrap = 200, weights=None, verbose=True, optimize = False)
 
                     print(f'Correlation inputs for {dtype} / {process_key}:')
                     print(f'  n_events = {corr_counts["n_events"]}')

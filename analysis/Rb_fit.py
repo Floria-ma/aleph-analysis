@@ -5,6 +5,7 @@ import numpy as np
 TAG_ORDER = ("Q", "S", "L", "X", "C")
 FLAVORS = ("b", "c", "x")
 
+# Rb fit parameters
 PARAMETER_ORDER = (
     "Rb",
     "eQb",
@@ -56,25 +57,21 @@ DEFAULT_LIMITS = {
     "eXx": (0.0, 1.0),
 }
 
-
+# order the tags
 def canonical_pair(tag1, tag2):
-    """Return the fit tuple key, ordered according to TAG_ORDER."""
     order = {tag: index for index, tag in enumerate(TAG_ORDER)}
     if order[tag1] <= order[tag2]:
         return tag1, tag2
     return tag2, tag1
 
-
 def canonical_category(tag1, tag2):
     """Return the category label used by analysis.categorization.event_category."""
     return "".join(sorted((tag1, tag2)))
-
 
 def iter_fit_pairs(tags=TAG_ORDER):
     for i, tag1 in enumerate(tags):
         for tag2 in tags[i:]:
             yield tag1, tag2
-
 
 def build_events_number(counts, n_tot=None, tags=TAG_ORDER):
     """
@@ -125,14 +122,14 @@ def build_fixed_rho(rho, tags=TAG_ORDER, flavors=FLAVORS, none_value=0.0):
         for tag1, tag2 in iter_fit_pairs(tags):
             category = canonical_category(tag1, tag2)
             value = rho[flavor][category]
-            if value is None:
+            # ignore None or extreme values
+            if value is None or value > 1.0 or value < -1.0:
                 value = none_value
             fixed_rho[(flavor, tag1, tag2)] = float(value)
     return fixed_rho
 
-
+# all inputs for RbFit
 def build_rb_inputs(counts, eps, rho, n_tot=None, tags=TAG_ORDER):
-    """Build all inputs needed by RbFit from structured category/correlation outputs."""
     return {
         "events": build_events_number(counts, n_tot=n_tot, tags=tags),
         "fixed_e": build_fixed_e(eps),
@@ -178,23 +175,16 @@ class RbFit:
         self.Rc = Rc
         self.tags = tuple(tags)
         self.tag_order = {tag: index for index, tag in enumerate(self.tags)}
-
+ 
+    # prefit values
+    # predict the single/double bin contents for given parameters
     def predict(
         self,
         Rb,
-        eQb,
-        eSx,
-        eSc,
-        eSb,
-        eLx,
-        eLc,
-        eLb,
-        eCx,
-        eCc,
-        eCb,
-        eXx,
-        eXc,
-        eXb,
+        eQb,eSx,eSc,
+        eSb,eLx,eLc,
+        eLb,eCx,eCc,
+        eCb,eXx,eXc,eXb,
     ):
         epsilon_b = {"Q": eQb, "S": eSb, "L": eLb, "C": eCb, "X": eXb}
         epsilon_c = {
@@ -215,6 +205,7 @@ class RbFit:
         n_tot = self.events["N_tot"]
         rc = self.Rc
 
+        # single tag
         fs = {}
         for tag in self.tags:
             fs[tag] = (
@@ -223,9 +214,11 @@ class RbFit:
                 + (1.0 - Rb - rc) * epsilon_x[tag]
             )
 
+        # double tag
         fd = {}
         pred_double = {}
         for tag1, tag2 in iter_fit_pairs(self.tags):
+            # for indistinguishable pairs (e.g. QQ), we only have one bin, so coeff=1.0.
             coeff = 1.0 if tag1 == tag2 else 2.0
             fd[(tag1, tag2)] = (
                 Rb * epsilon_b[tag1] * epsilon_b[tag2] * (1.0 + self.fixed_rho[("b", tag1, tag2)])
@@ -247,6 +240,7 @@ class RbFit:
     def predict_from_values(self, values):
         return self.predict(**{name: values[name] for name in PARAMETER_ORDER})
 
+    # negative log-likelihood to minimize
     def nll(
         self,
         Rb,
@@ -284,17 +278,17 @@ class RbFit:
         total = 0.0
         for tag, obs in self.events["single"].items():
             mu = pred["single"][tag]
-            total += poisson_deviance_term(obs, mu)
+            total += nll_term(obs, mu)
 
         for pair, obs in self.events["double"].items():
             mu = pred["double"][pair]
-            total += poisson_deviance_term(obs, mu)
+            total += nll_term(obs, mu)
 
         return total
 
-
-def poisson_deviance_term(obs, mu):
-    if mu <= 0.0 or not np.isfinite(mu):
+# nll contribution from one observed bin and its predicted mean
+def nll_term(obs, mu):
+    if mu <= 0.0:
         return 1.0e30
     if obs > 0.0:
         return mu - obs + obs * math.log(obs / mu)
@@ -312,9 +306,8 @@ def make_prefit_values(start_values=None):
         values.update(start_values)
     return values
 
-
+# prefit values built from total events number and efficiency/correlation inputs
 def events_from_prediction(reference_events, prediction):
-    """Build an event-count input dictionary using a prediction as pseudo-data."""
     return {
         "N_tot": float(reference_events["N_tot"]),
         "single": {
@@ -341,7 +334,7 @@ def make_prefit_asimov_events(
     prediction = fit.predict_from_values(make_prefit_values(start_values=start_values))
     return events_from_prediction(events, prediction)
 
-
+# result of an Rb fit, including the Minuit object and diagnostics
 @dataclass
 class RbFitResult:
     label: str
@@ -419,7 +412,6 @@ class RbFitResult:
             f" = {self.chi2_ndof:.8g}",
         ]
         return "\n".join(lines)
-
 
 def run_rb_fit(
     events=None,
