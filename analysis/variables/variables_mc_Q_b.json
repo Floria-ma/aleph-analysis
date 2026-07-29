@@ -1,0 +1,29 @@
+[
+{
+  "name": "jet_0_momentum",
+  "variable": "np.sqrt(Jets_pt[:,0]**2 + Jets_pz[:,0]**2)",
+  "axtitle": "First jet momentum",
+  "unit": "GeV",
+  "xlow": 0,
+  "xhigh": 100,
+  "nbins": 40
+},
+{
+  "name": "jet_1_momentum",
+  "variable": "np.sqrt(Jets_pt[:,1]**2 + Jets_pz[:,1]**2)",
+  "axtitle": "Second jet momentum",
+  "unit": "GeV",
+  "xlow": 0,
+  "xhigh": 100,
+  "nbins": 40
+},
+{
+  "name": "jet_momentum",
+  "variable": "np.sqrt(Jets_pt**2 + Jets_pz**2)",
+  "axtitle": "all jets momentum",
+  "unit": "GeV",
+  "xlow": 0,
+  "xhigh": 100,
+  "nbins": 40
+}
+]

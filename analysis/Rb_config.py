@@ -3,7 +3,6 @@ import json
 import os
 import sys
 
-
 thisdir = os.path.abspath(os.path.dirname(__file__))
 topdir = os.path.abspath(os.path.join(thisdir, "../"))
 sys.path.append(topdir)
@@ -29,8 +28,8 @@ def append_arg(cmd, arg, value):
     raise TypeError(f"Value of argument {arg} not recognized: {value} ({type(value)})")
 
 
-def make_command(samples, settings):
-    args = {
+def make_command(samples, settings, plot_correlation_histograms=False):
+    base_args = {
         "sim": samples.get("sim"),
         "data": samples.get("data"),
         "objectselection": ["selections/selection_jets.json"],
@@ -43,15 +42,25 @@ def make_command(samples, settings):
             "/eos/user/l/llambrec/aleph-data/model_output_scores/"
             "output_scores_model_20260305_withnewks_withdedx_masked_standardized"
         ),
-        "mc_uncertainty": True,
-        "skip_minos_for_variations": True,
-        "output_json": "rb_result_hyperopt.json",
-        "hyperopt_wp":True,
-        "hyperopt_n_bootstrap": 200,
-        "hyperopt_max_evals": 100,
     }
-    args.update(settings)
 
+    if plot_correlation_histograms:
+        # plotting-only run: no fit, no WP optimization, no MC uncertainty
+        args = dict(base_args)
+        args.update({
+            "plot_correlation_histograms": True,
+            "correlation_outputdir": "plots/correlation",
+        })
+    else:
+        args = dict(base_args)
+        args.update({
+            "mc_uncertainty": True,
+            "skip_minos_for_variations": True,
+            "output_json": "rb_result.json",
+            "correlation_systematic": True,
+        })
+
+    args.update(settings)
     cmd = "python3 Rb_analysis.py"
     for arg, value in args.items():
         cmd = append_arg(cmd, arg, value)
@@ -66,6 +75,10 @@ if __name__ == "__main__":
     parser.add_argument("-r", "--runmode", default="local", choices=["local", "condor"])
     parser.add_argument("--jobflavour", default="tomorrow")
     parser.add_argument("--memory", default=8000, type=int)
+    parser.add_argument("--proxy", default=None,
+                        help="Path to an X.509 proxy, if needed for EOS access on the worker node")
+    parser.add_argument("--plot_correlation_histograms", action="store_true",
+                        help="Only plot the raw all/same/opposite correlation histograms")
     args = parser.parse_args()
 
     with open(args.samples, "r") as handle:
@@ -86,23 +99,32 @@ if __name__ == "__main__":
     cmds = []
     for key, settings in config.items():
         this_settings = dict(settings)
-        if "output_json" not in this_settings:
+        if args.plot_correlation_histograms:
+            this_settings.setdefault("correlation_outputdir", f"plots/correlation_{key}")
+        elif "output_json" not in this_settings:
             this_settings["output_json"] = f"rb_result_{key}.json"
-        cmds.append(make_command(samples, this_settings))
+        cmd = make_command(
+            samples,
+            this_settings,
+            plot_correlation_histograms=args.plot_correlation_histograms,
+        )
+        cmds.append((key, cmd))
 
     if args.runmode == "local":
-        for cmd in cmds:
+        for key, cmd in cmds:
             print(cmd)
             os.system(cmd)
     elif args.runmode == "condor":
-        env_script = os.path.abspath("../setup.sh")
+        env_script = os.path.join(topdir, "setup.sh")
         env_cmd = f"source {env_script}"
-        for cmd in cmds:
+        for key, cmd in cmds:
             print(cmd)
             ct.submitCommandAsCondorJob(
-                "cjob_rb_analysis",
+                f"cjob_rb_analysis_{key}",
                 cmd,
                 jobflavour=args.jobflavour,
                 mem=args.memory,
+                home="auto",
+                proxy=args.proxy,
                 conda_activate=env_cmd,
             )

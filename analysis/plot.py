@@ -7,7 +7,6 @@ import copy
 import pickle
 import uproot
 import argparse
-import atexit
 import numpy as np
 import awkward as ak
 from fnmatch import fnmatch
@@ -35,25 +34,11 @@ from analysis.systematics import format_systematic_name
 from analysis.external_variables import read_external_variables
 from analysis.external_variables import find_external_files
 from analysis.thrust import add_thrust_variables, theta_difference
-from analysis.categorization import category, compute_epsilons_and_rhos
 from plotting.plot import plot
 
 # global pyplot settings
 #plt.rc("text", usetex=True)
 #plt.rc("font", family="serif")
-
-
-class Tee:
-    def __init__(self, *streams):
-        self.streams = streams
-
-    def write(self, data):
-        for stream in self.streams:
-            stream.write(data)
-
-    def flush(self):
-        for stream in self.streams:
-            stream.flush()
 
 
 def make_histograms(datastruct, variables,
@@ -72,7 +57,8 @@ def make_histograms(datastruct, variables,
         weights = None,
         weight_variations = None,
         xsections = None,
-        lumi = None):
+        lumi = None,
+        extract_correlation_branches = None):
     '''
     Helper function for making histograms from a given set of sampledicts.
     Input arguments:
@@ -80,6 +66,13 @@ def make_histograms(datastruct, variables,
       with each sampledict of the form {process name: data},
       with data either a list of files to read, or an awkward array of already loaded events.
     - variables: list of variables to produce histograms for
+    - extract_correlation_branches: optional list of branch names. If given, for every batch
+      that is read (after object/event selection, using the same nominal per-event weights as
+      the histograms), a column-selected slice with just these branches is accumulated instead
+      of re-reading the samples separately for e.g. the data/MC hemisphere-correlation
+      systematic; only these branches (not the full ~30-branch sample) are kept in memory for
+      the full run. When set, this function returns (hists, correlation_data) instead of just
+      hists, with correlation_data of the form {dtype: (events, weights) or None}.
     Returns:
     - dictionary with the following structure:
       dtype -> region_variable_key -> process_key -> systematic_key -> (counts, errors)
@@ -91,6 +84,10 @@ def make_histograms(datastruct, variables,
     # add nominal to weight variations (if not yet provided)
     if weight_variations is None: weight_variations = {}
     weight_variations['nominal'] = None
+
+    # accumulators for the optional compact correlation-systematic extraction
+    correlation_events = {}
+    correlation_weights = {}
 
     # loop over samples
     hists = {}
@@ -159,6 +156,7 @@ def make_histograms(datastruct, variables,
                 "JetsConstituents_px",
                 "JetsConstituents_py",
                 "JetsConstituents_pz",
+                "Event_dmerge2"
             ]
             if do_read_events:
                 this_sampledict = {process_key: files}
@@ -172,6 +170,8 @@ def make_histograms(datastruct, variables,
                     for branch in branches: this_branches_to_read.append(branch)
                 # remove duplicates
                 this_branches_to_read += extra_branches
+                if extract_correlation_branches is not None:
+                    this_branches_to_read += list(extract_correlation_branches)
                 this_branches_to_read = list(set(this_branches_to_read))
 
             # split files in batches if requested
@@ -272,70 +272,24 @@ def make_histograms(datastruct, variables,
                         nominal_weights = np.multiply(nominal_weights, weight_values)
                 # ad-hoc case with provided lumi and cross-section
                 elif dtype=='sim':
-                    # note: this will not work in batched mode,
+                    # note: this will not work in bachted mode,
                     # normalization will be done incorrectly if more than 1 batch is used!
                     if xsections is not None and lumi is not None:
                         xsec = xsections[process_key]
                         nominal_weights = lumi * xsec / nevents[process_key]
-                '''
-                counts, effs, n_2jet, sumw_2jet, categorized_events = category(events[process_key])
-                print(f'\nCategory summary for {dtype} / {process_key}:')
-                print(f'  Number of selected 2-jet events = {n_2jet}')
-                for cat in counts:
-                    print(f'  {cat:>2}: N = {counts[cat]:6d}, eff = {effs[cat]:.6f}')
-                print('')
-                '''
-                if dtype == "sim":
-                    counts, effs, n_2jet, sumw_2jet, categorized_events = category(
-                        events[process_key], weights=nominal_weights
-                    )
-                    print(f'\nWeighted category summary for {dtype} / {process_key}:')
-                    print(f'  Number of selected 2-jet events (raw) = {n_2jet}')
-                    print(f'  Sum of selected 2-jet weights        = {sumw_2jet:.6f}')
-                    #eps, pair_prob, rho, counts, eps_uncertainty, eps_boot_unc, rho_boot_unc
-                    eps, pair_prob, rho, corr_counts, eps_uncertainty, eps_boot_unc, rho_boot_unc = compute_epsilons_and_rhos(events[process_key], n_bootstrap = 200, weights=None, verbose=True, optimize = False)
 
-                    print(f'Correlation inputs for {dtype} / {process_key}:')
-                    print(f'  n_events = {corr_counts["n_events"]}')
-                    print(f'  n_jets   = {corr_counts["n_jets"]}')
-
-                    print('  Single-jet efficiencies:')
-                    for flav in ("b", "c", "x"):
-                        print(f'    flavor {flav}:')
-                        for tag in ("Q", "S", "L", "C", "X", "U"):
-                            print(f'   eps[{flav}][{tag}] = {eps[flav][tag]:.6f} with uncertainty {eps_uncertainty[flav][tag]:.6f} (bootstrap uncertainty {eps_boot_unc[flav][tag]:.6f})')
-                            #print(f' eps[{flav}][{tag}] = {eps[flav][tag]:.6f} with uncertainty {eps_uncertainty[flav][tag]:.6f}')
-
-                    print('  Pair probabilities and correlations:')
-                    pair_order = [
-                        "QQ", "SS", "LL", "CC", "XX",
-                        "QS", "LQ", "CQ", "QX",
-                        "LS", "CS", "SX",
-                        "CL", "LX",
-                        "CX",
-                        "QU", "SU", "LU", "CU", "UX"
-                    ]
-                    for flav in ("b", "c", "x"):
-                        print(f'    flavor {flav}:')
-                        for pair in pair_order:
-                            print(
-                                f'      {pair}: '
-                                f'P = {pair_prob[flav][pair]:.6f}, '
-                                f'rho = {rho[flav][pair]} with bootstrap uncertainty {rho_boot_unc[flav][pair]:.6f}'
-                                #f'rho = {rho[flav][pair]}'
-                            )
-                    print('')
-                else:
-                    counts, effs, n_2jet, sumw_2jet, categorized_events = category(events[process_key])
-                    print(f'\nCategory summary for {dtype} / {process_key}:')
-                    print(f'  Number of selected 2-jet events = {n_2jet}')
-
-                for cat in counts:
-                    if dtype == "sim":
-                        print(f'  {cat:>2}: yield = {counts[cat]:10.3f}, frac = {effs[cat]:.6f}')
-                    else:
-                        print(f'  {cat:>2}: N = {int(counts[cat]):6d}, eff = {effs[cat]:.6f}')
-                print('')
+                # extract a compact, column-selected slice for the optional
+                # correlation-systematic accumulation (post-selection, nominal
+                # weights only; no subprocess/region/blinding masking applied,
+                # matching the "whole selected sample" semantics make_events used to have)
+                if extract_correlation_branches is not None:
+                    correlation_events.setdefault(dtype, [])
+                    correlation_weights.setdefault(dtype, [])
+                    correlation_events[dtype].append(events[process_key][list(extract_correlation_branches)])
+                    batch_weights = np.asarray(nominal_weights, dtype=float)
+                    if batch_weights.ndim == 0:
+                        batch_weights = np.full(len(events[process_key]), float(batch_weights))
+                    correlation_weights[dtype].append(batch_weights)
 
                 # make masks for subprocesses
                 subprocess_masks = {process_key: np.ones(len(events[process_key])).astype(bool)}
@@ -425,7 +379,19 @@ def make_histograms(datastruct, variables,
     hists = newhists
 
     # return result
-    return hists
+    if extract_correlation_branches is None:
+        return hists
+
+    correlation_data = {}
+    for dtype in correlation_events.keys():
+        if len(correlation_events[dtype]) == 0:
+            correlation_data[dtype] = None
+            continue
+        correlation_data[dtype] = (
+            ak.concatenate(correlation_events[dtype]),
+            np.concatenate(correlation_weights[dtype]),
+        )
+    return hists, correlation_data
 
 
 def make_events(dtypedict,
@@ -511,16 +477,6 @@ def make_events(dtypedict,
                     events[dtype][process_key] = events[dtype][process_key][mask]
                     nselected = len(events[dtype][process_key])
                     print(f'Selected {nselected} out of {norig} entries.')
-
-            # print category yields and efficiencies
-            counts, effs, n_2jet, categorized_events = category(events[dtype][process_key])
-
-            print(f'\nCategory summary for {dtype} / {process_key}:')
-            print(f'  Number of selected 2-jet events = {n_2jet}')
-            for cat in counts:
-                print(f'  {cat:>2}: N = {counts[cat]:6d}, eff = {effs[cat]:.6f}')
-            print('')
-
 
             # recalculate regions
             if regions is not None and recalculate_regions:
@@ -823,7 +779,7 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-s', '--sim', required=True, nargs='+')
     parser.add_argument('-d', '--data', default=None, nargs='+')
-    parser.add_argument('-v', '--variables', required=True, nargs='+')
+    parser.add_argument('-v', '--variables', default=[], nargs='+')
     parser.add_argument('-o', '--outputdir', required=True)
     parser.add_argument('--objectselection', default=None, nargs='+')
     parser.add_argument('--eventselection', default=None)
@@ -841,16 +797,17 @@ if __name__=='__main__':
     parser.add_argument('--normalizesim', default=False, action='store_true')
     parser.add_argument('--shapes', default=False, action='store_true')
     parser.add_argument('--dolog', default=False, action='store_true')
+    parser.add_argument('--correlation_systematic', default=False, action='store_true')
+    parser.add_argument('--correlation_variables', default=['jet_momentum', 'cos_theta_thrust','phi_thrust','y3','cos_theta'], nargs='+')
+    parser.add_argument('--correlation_nbins', default=6, type=int)
+    parser.add_argument('--correlation_logy', default=False, action='store_true')
+    parser.add_argument('--correlation_xlim', default=[], nargs='+',
+        help='per-variable x-axis range overrides, as VARIABLE:XMIN:XMAX '
+             '(e.g. --correlation_xlim jet_momentum:0:50 cos_theta_thrust:0:1)')
+    parser.add_argument('--correlation_quantile_bins', default=False, action='store_true',
+    help='use quantile (equal-population) bins for the raw correlation histograms '
+         'instead of the default equal-width bins')
     args = parser.parse_args()
-
-    if not os.path.exists(args.outputdir):
-        os.makedirs(args.outputdir)
-    printout_path = os.path.join(args.outputdir, 'printout.txt')
-    printout_file = open(printout_path, 'w')
-    atexit.register(printout_file.close)
-    sys.stdout = Tee(sys.stdout, printout_file)
-    sys.stderr = Tee(sys.stderr, printout_file)
-    print(f'Saving printout to {printout_path}.')
 
     # set weight variations to include in the uncertainty band
     # (hard-coded for now, maybe extend later)
@@ -1032,9 +989,19 @@ if __name__=='__main__':
     print('Found following branches to read:')
     print(branches_to_read)
 
+    # branches needed for the optional data/MC hemisphere-correlation systematic
+    # (read in the same pass as the default histograms; see extract_correlation_branches)
+    correlation_branches = None
+    if args.correlation_systematic:
+        correlation_branches = [
+            'Jets_score_isB', 'Jets_score_isC', 'Jets_pt', 'Jets_pz',
+            'Event_costhrust', 'genEventType', 'Event_thrust_phi','Event_dmerge2','Jets_theta',
+            'Jets_score_isUDG'
+        ]
+
     # make histograms
     dtypedict = {'sim': sampledict_sim, 'data': sampledict_data}
-    hists_combined = make_histograms(dtypedict, variables,
+    make_histograms_result = make_histograms(dtypedict, variables,
                        branches_to_read = branches_to_read,
                        files_per_batch = args.files_per_batch,
                        objectselection = objectselection,
@@ -1046,7 +1013,13 @@ if __name__=='__main__':
                        splitdict = splitdict,
                        weight_variations = weight_variations,
                        lumi = luminosity,
-                       xsections = xsections)
+                       xsections = xsections,
+                       extract_correlation_branches = correlation_branches)
+    if correlation_branches is not None:
+        hists_combined, correlation_data = make_histograms_result
+    else:
+        hists_combined = make_histograms_result
+        correlation_data = None
 
     # do some parsing after the loop above
     # (now that regions might have been recalculated,
@@ -1079,8 +1052,102 @@ if __name__=='__main__':
     if not os.path.exists(args.outputdir): os.makedirs(args.outputdir)
 
     # plotting loop
-    plot_hists_default(hists_combined, variables, args.outputdir,
-      regions=regions, datatag=datatag,
-      shapes=args.shapes, normalizesim=args.normalizesim, dolog=args.dolog,
-      extracmstext=extracmstext, lumiheader=lumiheader,
-      event_selection_name=event_selection_name, select_processes=select_processes)
+    # (skipped entirely if no -v/--variables were given, e.g. when only
+    #  --correlation_systematic is wanted)
+    if len(variables) > 0:
+        plot_hists_default(hists_combined, variables, args.outputdir,
+          regions=regions, datatag=datatag,
+          shapes=args.shapes, normalizesim=args.normalizesim, dolog=args.dolog,
+          extracmstext=extracmstext, lumiheader=lumiheader,
+          event_selection_name=event_selection_name, select_processes=select_processes)
+
+    # optional: data/MC hemisphere-correlation systematic raw histograms
+    # (events for this were already accumulated in the make_histograms call above,
+    #  in the same read pass as the default histograms; see extract_correlation_branches)
+    # optional: data/MC hemisphere-correlation systematic plots
+    # (events for this were already accumulated in the make_histograms call above,
+    #  in the same read pass as the default histograms; see extract_correlation_branches)
+    if args.correlation_systematic:
+        from analysis.correlation_systematics import (
+            plot_correlation_raw_histograms,
+            plot_variable_distributions_native,
+            plot_soft_tag_control_plots,
+            plot_curves,
+            plot_rho_summary,
+        )
+
+        sim_entry = correlation_data.get('sim')
+        data_entry = correlation_data.get('data')
+        sim_events, sim_weights = sim_entry if sim_entry is not None else (None, None)
+        data_events, data_weights = data_entry if data_entry is not None else (None, None)
+
+        if sim_events is None:
+            print('WARNING: --correlation_systematic requires simulation samples; skipping.')
+        elif data_events is None:
+            print('WARNING: --correlation_systematic requires data samples; skipping.')
+        else:
+            # parse per-variable x-axis range overrides (VARIABLE:XMIN:XMAX)
+            correlation_xlim = {}
+            for entry in args.correlation_xlim:
+                varname, xmin, xmax = entry.split(':')
+                correlation_xlim[varname] = (float(xmin), float(xmax))
+
+            common = dict(
+                variables=args.correlation_variables,
+                nbins=args.correlation_nbins,
+                outputdir=args.outputdir,
+            )
+
+            # 1. raw (weighted) same/opposite-tag histograms feeding rho
+            print('Plotting data/MC hemisphere-correlation raw histograms...')
+            plot_correlation_raw_histograms(
+                sim_events, sim_weights, data_events, data_weights,
+                logy=args.correlation_logy,
+                xlim=correlation_xlim,
+                quantile_bins=args.correlation_quantile_bins,
+                **common,
+            )
+
+            # 2. per-truth-flavor variable distributions (simulation only), with
+            #    the analysis bin edges and per-bin counts overlaid
+            print('Plotting correlation variable distributions (MC)...')
+            plot_variable_distributions_native(
+                sim_events, sim_weights,
+                variables=args.correlation_variables,
+                nbins=args.correlation_nbins,
+                outputdir=args.outputdir,
+            )
+
+            # 3. stacked-MC-vs-data soft-tag control plots (per soft tag), using
+            #    the same method-1 norm_factor as the background subtraction
+            print('Plotting soft-tag control plots...')
+            plot_soft_tag_control_plots(
+                sim_events, sim_weights, data_events, data_weights,
+                **common,
+            )
+
+            # 4. same/opposite-hemisphere efficiency curves, MC vs data-driven
+            #    (and an MC-only variant)
+            print('Plotting correlation efficiency curves...')
+            plot_curves(
+                sim_events, sim_weights, data_events, data_weights,
+                **common,
+            )
+            plot_curves(
+                sim_events, sim_weights, data_events, data_weights,
+                mc_only=True,
+                **common,
+            )
+
+            # 5. aggregate rho-per-tag-pair summary, MC vs data-driven
+            #    (and an MC-only variant)
+            print('Plotting correlation rho summary...')
+            plot_rho_summary(
+                sim_events, sim_weights, data_events, data_weights,
+                **common,
+            )
+            plot_rho_summary(
+                sim_events, sim_weights, data_events, data_weights,
+                mc_only=True,
+                **common,
+            )

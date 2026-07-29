@@ -58,9 +58,11 @@ DEFAULT_LIMITS = {
 }
 
 # order the tags
+_TAG_ORDER_INDEX = {tag: index for index, tag in enumerate(TAG_ORDER)}
+
+
 def canonical_pair(tag1, tag2):
-    order = {tag: index for index, tag in enumerate(TAG_ORDER)}
-    if order[tag1] <= order[tag2]:
+    if _TAG_ORDER_INDEX[tag1] <= _TAG_ORDER_INDEX[tag2]:
         return tag1, tag2
     return tag2, tag1
 
@@ -175,7 +177,15 @@ class RbFit:
         self.Rc = Rc
         self.tags = tuple(tags)
         self.tag_order = {tag: index for index, tag in enumerate(self.tags)}
- 
+        # precomputed once per fit (not per NLL evaluation): the fit pairs to
+        # build fd over, and, per tag, the canonical pairs summed into
+        # pred_single, both of which only depend on self.tags.
+        self._fit_pairs = tuple(iter_fit_pairs(self.tags))
+        self._pairs_by_tag = {
+            tag: tuple(canonical_pair(tag, other) for other in self.tags)
+            for tag in self.tags
+        }
+
     # prefit values
     # predict the single/double bin contents for given parameters
     def predict(
@@ -217,7 +227,7 @@ class RbFit:
         # double tag
         fd = {}
         pred_double = {}
-        for tag1, tag2 in iter_fit_pairs(self.tags):
+        for tag1, tag2 in self._fit_pairs:
             # for indistinguishable pairs (e.g. QQ), we only have one bin, so coeff=1.0.
             coeff = 1.0 if tag1 == tag2 else 2.0
             fd[(tag1, tag2)] = (
@@ -229,10 +239,7 @@ class RbFit:
 
         pred_single = {}
         for tag in self.tags:
-            sum_fd_singly = 0.0
-            for other_tag in self.tags:
-                key = canonical_pair(tag, other_tag)
-                sum_fd_singly += 2.0 * fd[key]
+            sum_fd_singly = 2.0 * sum(fd[pair] for pair in self._pairs_by_tag[tag])
             pred_single[tag] = n_tot * (2.0 * fs[tag] - sum_fd_singly)
 
         return {"single": pred_single, "double": pred_double}

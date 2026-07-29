@@ -7,9 +7,10 @@ from collections import defaultdict
 #ctagcut = [0.2, 0.6]
 
 # hyperopt optimization
-btagcut = [0.396, 0.601, 0.855]
-ctagcut = [0.524, 0.605]
-
+#btagcut = [0.396, 0.601, 0.855]
+#ctagcut = [0.524, 0.605]
+btagcut = [0.45, 0.9, 0.99]
+ctagcut = [0.2, 0.60]
 # optimize by events number
 #btagcut = [0.35, 0.9, 0.999]
 #ctagcut = [0.55, 0.6]
@@ -49,7 +50,7 @@ TAG_LABELS = ("Q", "S", "L", "C", "X", "U")
 TAG_INDEX = {tag: index for index, tag in enumerate(TAG_LABELS)}
 
 
-#jets are not distinguishable 
+#jets are indistinguishable 
 def event_category(tag1, tag2):
     pair = "".join(sorted([tag1, tag2]))
     if pair in Regions:
@@ -270,6 +271,9 @@ def compute_epsilons_and_rhos(events, weights=None, tags=("Q", "S", "L", "C", "X
         n_pairs = len(pair_labels)
         eps_samples = np.empty((n_bootstrap, n_flavors, n_tags), dtype=float)
         rho_samples = np.full((n_bootstrap, n_flavors, n_pairs), np.nan, dtype=float)
+        pair_i_idx = np.array([tag_index[pair[0]] for pair in pair_labels])
+        pair_j_idx = np.array([tag_index[pair[1]] for pair in pair_labels])
+        pair_same = (pair_i_idx == pair_j_idx)[None, :]
 
         for iboot in range(n_bootstrap):
             boot_idx = rng.choice(n_selected_events, size=n_selected_events, replace=True)
@@ -316,19 +320,17 @@ def compute_epsilons_and_rhos(events, weights=None, tags=("Q", "S", "L", "C", "X
 
             eps_samples[iboot] = boot_eps_array
 
-            for ipair, pair in enumerate(pair_labels):
-                i = tag_index[pair[0]]
-                j = tag_index[pair[1]]
-                if i == j:
-                    denom = boot_eps_array[:, i] ** 2
-                else:
-                    denom = 2.0 * boot_eps_array[:, i] * boot_eps_array[:, j]
-                rho_samples[iboot, :, ipair] = np.divide(
-                    boot_pair_prob[:, ipair],
-                    denom,
-                    out=np.full(n_flavors, np.nan, dtype=float),
-                    where=denom > 0,
-                ) - 1.0
+            denom = np.where(
+                pair_same,
+                boot_eps_array[:, pair_i_idx] ** 2,
+                2.0 * boot_eps_array[:, pair_i_idx] * boot_eps_array[:, pair_j_idx],
+            )
+            rho_samples[iboot] = np.divide(
+                boot_pair_prob,
+                denom,
+                out=np.full((n_flavors, n_pairs), np.nan, dtype=float),
+                where=denom > 0,
+            ) - 1.0
 
         for iflavor, f in enumerate(flavors):
             for itag, tag in enumerate(tags):
@@ -363,35 +365,36 @@ def compute_epsilons_and_rhos(events, weights=None, tags=("Q", "S", "L", "C", "X
         jet_type = np.where(jet_type == 5, "b",
                 np.where(jet_type == 4, "c", "x"))
 
+        # Split the score arrays by flavor ONCE, outside the scan: jet_type is
+        # fixed across all working points, so the per-flavor (b_scores, c_scores)
+        # views never change. Inside the scan only the cut thresholds move, so
+        # the tag counts reduce to numeric comparisons on these views -- no
+        # per-iteration object array or string compares. Same counts as before.
+        flavor_scores = {}
+        for f in flavors:
+            mask_f = (jet_type == f)
+            flavor_scores[f] = (b_scores[mask_f], c_scores[mask_f])
+
         #function to compute the score for given btag and ctag cuts
         def compute_score(b_scores, c_scores, jet_type):
-            #first assign all jets to "U", untagged
-            tag_name = np.full(len(b_scores), "U", dtype=object)
-            # high purity b tag
-            tag_name[(b_scores > btagcut[2])] = "Q"
-            # medium purity b tag
-            tag_name[(b_scores > btagcut[1]) & (b_scores <= btagcut[2])] = "S"
-            # high purity c tag, only for jets that fail the lowest b score
-            tag_name[(b_scores <= btagcut[0]) & (c_scores > ctagcut[1])] = "C"
-            # veto region for b and c tags
-            tag_name[(b_scores <= btagcut[0]) & (c_scores <= ctagcut[0])] = "X"
-            # low purity b tag
-            tag_name[(b_scores > btagcut[0]) & (b_scores <= btagcut[1])] = "L"
-
+            # Counts per (flavor, tag) with the current global btagcut/ctagcut.
+            # Identical tag definitions to the original string-based version;
+            # only the mechanism (boolean sums on per-flavor views) differs.
             eps_local = {f: {} for f in flavors}
-
             for f in flavors:
-                #count jets of flavor f, efficiency for each tag is n_tag / n_f
-                mask_f = (jet_type == f)
-                n_f = np.sum(mask_f)
-
-                #count jets of flavor f, tagged by tag I
-                for tag in tags:
-                    mask = mask_f & (tag_name == tag)
-                    n_tag = np.sum(mask)
-                    #eps_local[f][tag] = n_tag / n_f if n_f > 0 else 0.0
-                    #for now, directly use counts to compute score
-                    eps_local[f][tag] = n_tag 
+                bf, cf = flavor_scores[f]
+                is_Q = bf > btagcut[2]
+                is_S = (bf > btagcut[1]) & (bf <= btagcut[2])
+                is_C = (bf <= btagcut[0]) & (cf > ctagcut[1])
+                is_X = (bf <= btagcut[0]) & (cf <= ctagcut[0])
+                is_L = (bf > btagcut[0]) & (bf <= btagcut[1])
+                counted = is_Q | is_S | is_C | is_X | is_L
+                eps_local[f]["Q"] = float(np.count_nonzero(is_Q))
+                eps_local[f]["S"] = float(np.count_nonzero(is_S))
+                eps_local[f]["C"] = float(np.count_nonzero(is_C))
+                eps_local[f]["X"] = float(np.count_nonzero(is_X))
+                eps_local[f]["L"] = float(np.count_nonzero(is_L))
+                eps_local[f]["U"] = float(bf.shape[0] - np.count_nonzero(counted))
 
             # compute score
             score = 0.0

@@ -1,0 +1,7 @@
+{
+  "selection": [
+    "np.sqrt(np.square(Jets_pt) + np.square(Jets_pz)) > 10",
+    "np.abs(np.cos(Jets_theta)) < 0.65"
+  ],
+  "application": ["Jets_*", "JetsConstituents_*"]
+}

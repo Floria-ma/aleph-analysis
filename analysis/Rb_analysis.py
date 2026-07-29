@@ -26,6 +26,7 @@ from analysis.Rb_fit import build_fixed_rho, build_rb_inputs, run_rb_fit
 from analysis.Rb_fit import mc_uncertainty_from_results
 from analysis.Rb_fit import print_fit_report, print_mc_uncertainty_report
 from analysis.Rb_wp_optimization import CachedRbArrays, optimize_working_points
+from analysis.correlation_systematics import run_correlation_systematic, print_correlation_systematic_report
 
 
 RB_REQUIRED_BRANCHES = [
@@ -802,6 +803,26 @@ def run_analysis(args):
         print()
         print_mc_uncertainty_report(mc_uncertainty)
 
+    correlation_systematic = None
+    if args.correlation_systematic:
+        if data_events is None:
+            raise ValueError("--correlation_systematic requires --data")
+        correlation_systematic = run_correlation_systematic(
+            nominal_result,
+            rb_inputs,
+            metadata,
+            sim_events=sim_events,
+            sim_weights=sim_weights,
+            data_events=data_events,
+            data_weights=data_weights,
+            Rc=args.Rc,
+            variables=tuple(args.correlation_variables),
+            nbins=args.correlation_nbins,
+            do_minos=not args.skip_minos_for_variations,
+        )
+        print()
+        print_correlation_systematic_report(correlation_systematic)
+
     if args.output_json is not None:
         output = {
             "nominal": nominal_result.as_dict(include_minuit=False),
@@ -810,6 +831,7 @@ def run_analysis(args):
             "fixed_rho": {str(key): value for key, value in rb_inputs["fixed_rho"].items()},
             "mc_uncertainty": mc_uncertainty,
             "wp_optimization": wp_optimization,
+            "correlation_systematic": correlation_systematic,
         }
         with open(args.output_json, "w") as handle:
             json.dump(output, handle, indent=2)
@@ -823,6 +845,7 @@ def run_analysis(args):
         "efficiency_results": efficiency_results,
         "rho_results": rho_results,
         "wp_optimization": wp_optimization,
+        "correlation_systematic": correlation_systematic,
         "sim_events": sim_events,
         "sim_weights": sim_weights,
         "data_events": data_events,
@@ -866,6 +889,11 @@ def parse_args():
     parser.add_argument("--mc_uncertainty_mode", default="max_abs_pair",
                         choices=["all", "max_abs_pair"])
     parser.add_argument("--skip_minos_for_variations", action="store_true")
+    parser.add_argument("--correlation_systematic", action="store_true",
+                        help="Compute the data/MC hemisphere-correlation systematic on Rb")
+    parser.add_argument("--correlation_variables", default=["jet_momentum", "cos_theta_thrust"],
+                        nargs="+")
+    parser.add_argument("--correlation_nbins", default=6, type=int)
     parser.add_argument("--output_json", default=None)
     return parser.parse_args()
 
