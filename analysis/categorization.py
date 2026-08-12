@@ -7,10 +7,11 @@ from collections import defaultdict
 #ctagcut = [0.2, 0.6]
 
 # hyperopt optimization
-#btagcut = [0.396, 0.601, 0.855]
-#ctagcut = [0.524, 0.605]
-btagcut = [0.45, 0.9, 0.99]
-ctagcut = [0.2, 0.60]
+btagcut = [0.396, 0.601, 0.855]
+ctagcut = [0.524, 0.605]
+
+#btagcut = [0.45, 0.9, 0.99]
+#ctagcut = [0.2, 0.60]
 # optimize by events number
 #btagcut = [0.35, 0.9, 0.999]
 #ctagcut = [0.55, 0.6]

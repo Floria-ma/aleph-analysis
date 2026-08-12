@@ -68,7 +68,7 @@
   "axtitle": "Jet theta-thrust difference",
   "unit": "",
   "xlow": 0,
-  "xhigh": 1,
-  "nbins": 50
+  "xhigh": 0.7,
+  "nbins": 40
 }   
 ]
