@@ -2,6 +2,7 @@
   "Baseline selection": [
     "ak.any(recoEventType==16, axis=1)",
     "Event_dmerge2 / np.square(91.2) < 0.13",
-    "ak.num(Jets_pt)>=2"
+    "ak.num(Jets_pt)>=2",
+    "np.abs(Event_costhrust) < 0.65"
   ]
 }

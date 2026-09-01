@@ -31,6 +31,7 @@ fitted rho entry is shifted by its delta_rho and the fit is redone once.
 """
 
 import os
+import json
 from typing import NamedTuple
 
 import numpy as np
@@ -615,6 +616,84 @@ def print_correlation_systematic_report(correlation_systematic):
     for variable, delta_rb in correlation_systematic["delta_rb_by_variable"].items():
         print(f"  {variable}: delta_Rb = {delta_rb:.8g}")
     print(f"  total (quadrature) = {correlation_systematic['total']:.8g}")
+
+
+def save_rho_values(
+    sim_events,
+    sim_weights,
+    data_events,
+    data_weights,
+    variables=("jet_momentum", "cos_theta_thrust", "phi_thrust", "y3", "cos_theta"),
+    nbins=6,
+    outputdir=".",
+    tags=TAG_ORDER,
+    flavors=("x", "c", "b"),
+    basename="rho_values",
+):
+    """
+    Dump the aggregate (bin-integrated) rho values behind the rho_summary plots,
+    per variable / flavor / tag pair:
+      - rho_mc    : rho_f^{I,J} from simulation truth flavor
+                    (compute_rho_vs_variable_mc)
+      - rho_data  : rho_g^{I,J} from data, soft-tag isolated + method-1 MC
+                    background subtraction (compute_rho_vs_variable_data)
+      - delta_rho : rho_data - rho_mc (the data/MC correlation shift that is
+                    propagated to Rb in run_correlation_systematic)
+
+    Same inputs and per-variable BIN_CONFIG binning as plot_rho_summary, so the
+    numbers match that plot. Writes two files in outputdir:
+      - <basename>.json : nested structure
+          {variable: {"bins": [...],
+                      "flavors": {flavor: {pair: {"rho_mc", "rho_data",
+                                                  "delta_rho"}}}}}
+      - <basename>.txt  : flat whitespace-aligned table with the same numbers
+
+    Pair keys are the two tags sorted alphabetically (rho is symmetric); an
+    undefined rho (empty sample / zero denominator) is null in JSON and "nan" in
+    the txt table. Returns the nested dict that was written to JSON.
+    """
+    results = compute_correlation_delta_rho(
+        sim_events, sim_weights, data_events, data_weights,
+        variables=variables, nbins=nbins, tags=tags, flavors=flavors,
+    )
+
+    out = {}
+    rows = []
+    for variable, entry in results.items():
+        rho_mc = entry["rho_mc"]
+        rho_data = entry["rho_data"]
+        delta = entry["delta_rho"]
+        var_block = {"bins": entry["bins"], "flavors": {}}
+        for f in flavors:
+            pair_block = {}
+            for tag1, tag2 in iter_fit_pairs(tags):
+                pair = canonical_category(tag1, tag2)
+                rm = rho_mc.get(f, {}).get(pair)
+                rd = rho_data.get(f, {}).get(pair)
+                dr = delta.get(f, {}).get(pair)
+                pair_block[pair] = {"rho_mc": rm, "rho_data": rd, "delta_rho": dr}
+                rows.append((variable, f, pair, rm, rd, dr))
+            var_block["flavors"][f] = pair_block
+        out[variable] = var_block
+
+    os.makedirs(outputdir, exist_ok=True)
+    json_path = os.path.join(outputdir, f"{basename}.json")
+    with open(json_path, "w") as handle:
+        json.dump(out, handle, indent=2)
+
+    def _fmt(value):
+        return "nan" if value is None else f"{value:+.6f}"
+
+    txt_path = os.path.join(outputdir, f"{basename}.txt")
+    with open(txt_path, "w") as handle:
+        handle.write(f"# {'variable':<18} {'flavor':<6} {'pair':<4} "
+                     f"{'rho_mc':>12} {'rho_data':>12} {'delta_rho':>12}\n")
+        for variable, f, pair, rm, rd, dr in rows:
+            handle.write(f"  {variable:<18} {f:<6} {pair:<4} "
+                         f"{_fmt(rm):>12} {_fmt(rd):>12} {_fmt(dr):>12}\n")
+
+    print(f"Wrote correlation rho values to {json_path} and {txt_path}")
+    return out
 
 
 

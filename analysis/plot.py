@@ -1074,6 +1074,7 @@ if __name__=='__main__':
             plot_soft_tag_control_plots,
             plot_curves,
             plot_rho_summary,
+            save_rho_values,
         )
 
         sim_entry = correlation_data.get('sim')
@@ -1149,5 +1150,13 @@ if __name__=='__main__':
             plot_rho_summary(
                 sim_events, sim_weights, data_events, data_weights,
                 mc_only=True,
+                **common,
+            )
+
+            # 6. dump the numeric rho values behind the rho summary plots
+            #    (rho_mc, rho_data, and data-MC delta_rho) to JSON + a text table
+            print('Saving correlation rho values...')
+            save_rho_values(
+                sim_events, sim_weights, data_events, data_weights,
                 **common,
             )
