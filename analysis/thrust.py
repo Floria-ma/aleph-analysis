@@ -220,3 +220,54 @@ def theta_difference(events):
     diff = np.abs(thrust_costheta - jet_costheta)
     events = ak.with_field(events, diff, "thrust_jets_costheta_diff")
     return events
+
+
+def jetsMatchdR_for_backtoback_recojet(events, min_open_angle=3.0):
+    """
+    Attach Jets_open_angle (opening angle between the two leading reco jets, rad),
+    Jets_dp (absolute momentum difference | |p1| - |p2| | of the two jets, GeV)
+    and Jets_match_dR_backtoback: Jets_match_dR for events whose jets are
+    back-to-back (opening angle > min_open_angle), None otherwise.
+    """
+    # Pad to 2 jets so events with < 2 jets (before selection) give None
+    jets_px = ak.pad_none(events["Jets_px"], 2, axis=1)
+    jets_py = ak.pad_none(events["Jets_py"], 2, axis=1)
+    jets_pz = ak.pad_none(events["Jets_pz"], 2, axis=1)
+
+    jet1_px = jets_px[:, 0]
+    jet1_py = jets_py[:, 0]
+    jet1_pz = jets_pz[:, 0]
+
+    jet2_px = jets_px[:, 1]
+    jet2_py = jets_py[:, 1]
+    jet2_pz = jets_pz[:, 1]
+
+    # Compute the dot product and magnitudes of the two jets
+    dot_product = jet1_px * jet2_px + jet1_py * jet2_py + jet1_pz * jet2_pz
+    mag_jet1 = np.sqrt(jet1_px**2 + jet1_py**2 + jet1_pz**2)
+    mag_jet2 = np.sqrt(jet2_px**2 + jet2_py**2 + jet2_pz**2)
+
+    # Compute the cosine of the opening angle
+    cos_angle = dot_product / (mag_jet1 * mag_jet2)
+    
+    # Ensure the cosine value is within valid range [-1, 1] to avoid numerical issues
+    cos_angle = np.clip(cos_angle, -1.0, 1.0)
+
+    # Compute the opening angle in radians
+    opening_angle = np.arccos(cos_angle)
+
+    # Keep the matching dR only for back-to-back events; others become None
+    # (Jets_match_dR is MC-only; for data the field is all None)
+    backtoback = ak.to_numpy(ak.fill_none(opening_angle > min_open_angle, False))
+    if "Jets_match_dR" in events.fields:
+        dR = ak.mask(events["Jets_match_dR"], backtoback)
+    else:
+        dR = ak.mask(events["Jets_px"], np.zeros(len(events), dtype=bool))
+
+    # Add the opening angle to the events
+    events = ak.with_field(events, opening_angle, "Jets_open_angle")
+    events = ak.with_field(events, np.abs(mag_jet1 - mag_jet2), "Jets_dp")
+    events = ak.with_field(events, dR, "Jets_match_dR_backtoback")
+
+    return events
+ 

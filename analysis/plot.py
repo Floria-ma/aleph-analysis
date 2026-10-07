@@ -33,7 +33,7 @@ from analysis.systematics import get_weight_variation
 from analysis.systematics import format_systematic_name
 from analysis.external_variables import read_external_variables
 from analysis.external_variables import find_external_files
-from analysis.thrust import add_thrust_variables, theta_difference
+from analysis.thrust import add_thrust_variables, theta_difference, jetsMatchdR_for_backtoback_recojet
 from plotting.plot import plot
 
 # global pyplot settings
@@ -156,7 +156,8 @@ def make_histograms(datastruct, variables,
                 "JetsConstituents_px",
                 "JetsConstituents_py",
                 "JetsConstituents_pz",
-                "Event_dmerge2"
+                "Event_dmerge2",
+                "Jets_match_dR"
             ]
             if do_read_events:
                 this_sampledict = {process_key: files}
@@ -253,6 +254,9 @@ def make_histograms(datastruct, variables,
                         events[process_key] = events[process_key][mask]
                         nselected = len(events[process_key])
                         print(f'Selected {nselected} out of {nbefore} entries.')
+
+                # back-to-back jet matching dR (computed after all selections)
+                events[process_key] = jetsMatchdR_for_backtoback_recojet(events[process_key])
 
                 # recalculate regions
                 this_regions = regions
@@ -477,6 +481,9 @@ def make_events(dtypedict,
                     events[dtype][process_key] = events[dtype][process_key][mask]
                     nselected = len(events[dtype][process_key])
                     print(f'Selected {nselected} out of {norig} entries.')
+
+            # back-to-back jet matching dR (computed after all selections)
+            events[dtype][process_key] = jetsMatchdR_for_backtoback_recojet(events[dtype][process_key])
 
             # recalculate regions
             if regions is not None and recalculate_regions:

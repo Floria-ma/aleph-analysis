@@ -1,68 +1,5 @@
 [
 {
-  "name": "jet_energy",
-  "variable": "Jets_e",
-  "axtitle": "Jet energy",
-  "unit": "GeV",
-  "xlow": 20,
-  "xhigh": 70,
-  "nbins": 50
-},
-{
-  "name": "jet_mass",
-  "variable": "Jets_mass",
-  "axtitle": "Jet mass",
-  "unit": "GeV",
-  "xlow": 0,
-  "xhigh": 40,
-  "nbins": 40
-},
-{
-  "name": "jet_pt",
-  "variable": "Jets_pt",
-  "axtitle": "Jet transverse momentum",
-  "unit": "GeV",
-  "xlow": 0,
-  "xhigh": 60,
-  "nbins": 60
-},
-{
-  "name": "jet_score_isB",
-  "variable": "Jets_score_isB",
-  "axtitle": "Jets B score",
-  "unit": "",
-  "xlow": 0,
-  "xhigh": 1,
-  "nbins": 50
-},
-{
-  "name": "jet_score_isC",
-  "variable": "Jets_score_isC",
-  "axtitle": "Jets C score",
-  "unit": "",
-  "xlow": 0,
-  "xhigh": 1,
-  "nbins": 50
-},
-{
-  "name": "jet_score_isUDG",
-  "variable": "Jets_score_isUDG",
-  "axtitle": "Jets UDG score",
-  "unit": "",
-  "xlow": 0,
-  "xhigh": 1,
-  "nbins": 50
-},
-{
-  "name": "jet_score_isS",
-  "variable": "Jets_score_isS",
-  "axtitle": "Jets S score",
-  "unit": "",
-  "xlow": 0,
-  "xhigh": 1,
-  "nbins": 50
-},
-{
   "name": "jet_theta_thrust_difference",
   "variable": "thrust_jets_costheta_diff",
   "axtitle": "Jet theta-thrust difference",
@@ -70,5 +7,59 @@
   "xlow": 0,
   "xhigh": 1,
   "nbins": 50
-}   
+},
+{
+  "name": "jets_open_angle",
+  "variable": "Jets_open_angle",
+  "axtitle": "Opening angle between the two jets",
+  "unit": "rad",
+  "xlow": 0,
+  "xhigh": 4,
+  "nbins": 50
+},
+{
+  "name": "jets_dp",
+  "variable": "Jets_dp",
+  "axtitle": "Momentum difference between the two jets",
+  "unit": "GeV",
+  "xlow": 0,
+  "xhigh": 20,
+  "nbins": 50
+},
+{
+  "name": "jets_match_dR_backtoback",
+  "variable": "Jets_match_dR_backtoback",
+  "axtitle": "Jet matching $\\Delta R$ (back-to-back jets)",
+  "unit": "",
+  "xlow": 0,
+  "xhigh": 2,
+  "nbins": 80
+},
+{
+  "name": "GenQQbar_dp",
+  "variable": "GenQQbar_dp",
+  "axtitle": "momentum difference between the two gen quarks",
+  "unit": "",
+  "xlow": 0,
+  "xhigh": 20,
+  "nbins": 50
+},
+{
+  "name":"GenQQbar_openAngle",
+  "variable":"GenQQbar_openAngle",
+  "axtitle":"opening angle between the two gen quarks",
+  "unit":"rad",
+  "xlow":0,
+  "xhigh":4,
+  "nbins":50
+},
+{
+  "name":"GenQQbar_nQuarks",
+  "variable":"GenQQbar_nQuarks",
+  "axtitle":"number of gen quarks",
+  "unit":"",
+  "xlow":0,
+  "xhigh":22,
+  "nbins":22
+}
 ]
