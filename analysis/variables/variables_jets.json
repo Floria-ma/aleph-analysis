@@ -32,7 +32,7 @@
   "axtitle": "Jet matching $\\Delta R$ (back-to-back jets)",
   "unit": "",
   "xlow": 0,
-  "xhigh": 2,
+  "xhigh": 4,
   "nbins": 80
 },
 {
