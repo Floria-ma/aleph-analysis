@@ -1,0 +1,7 @@
+awkward
+matplotlib
+numpy
+onnx
+onnxruntime
+uproot
+vector

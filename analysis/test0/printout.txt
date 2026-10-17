@@ -1,0 +1,252 @@
+Reading external variables from /eos/user/l/llambrec/aleph-data/model_output_scores/output_scores_model_20260305_withnewks_standardized/...
+Doing extra object selection...
+Doing extra event selection...
+Selected 575589 out of 1080986 entries.
+
+Weighted category summary for sim / qqb:
+  Number of selected 2-jet events (raw) = 575589
+  Sum of selected 2-jet weights        = 936666.986957
+------ for the rho numerator ------
+  b: CC -> 197.0
+  b: CL -> 653.0
+  b: CQ -> 6005.0
+  b: CS -> 995.0
+  b: CU -> 113.0
+  b: CX -> 1160.0
+  b: LL -> 565.0
+  b: LQ -> 11232.0
+  b: LS -> 1950.0
+  b: LU -> 177.0
+  b: LX -> 2183.0
+  b: QQ -> 52516.0
+  b: QS -> 18322.0
+  b: QU -> 1853.0
+  b: QX -> 21490.0
+  b: SS -> 1530.0
+  b: SU -> 294.0
+  b: SX -> 3599.0
+  b: UX -> 340.0
+  b: XX -> 1864.0
+------ for the rho denominator ------
+  b: CC -> tag I njets:9320.0, tag J njets:9320.0 -> eps 0.0367 0.0367
+  b: CL -> tag I njets:9320.0, tag J njets:17325.0 -> eps 0.0367 0.0682
+  b: CQ -> tag I njets:9320.0, tag J njets:163934.0 -> eps 0.0367 0.6452
+  b: CS -> tag I njets:9320.0, tag J njets:28220.0 -> eps 0.0367 0.1111
+  b: CU -> tag I njets:9320.0, tag J njets:2777.0 -> eps 0.0367 0.0109
+  b: CX -> tag I njets:9320.0, tag J njets:32500.0 -> eps 0.0367 0.1279
+  b: LL -> tag I njets:17325.0, tag J njets:17325.0 -> eps 0.0682 0.0682
+  b: LQ -> tag I njets:17325.0, tag J njets:163934.0 -> eps 0.0682 0.6452
+  b: LS -> tag I njets:17325.0, tag J njets:28220.0 -> eps 0.0682 0.1111
+  b: LU -> tag I njets:17325.0, tag J njets:2777.0 -> eps 0.0682 0.0109
+  b: LX -> tag I njets:17325.0, tag J njets:32500.0 -> eps 0.0682 0.1279
+  b: QQ -> tag I njets:163934.0, tag J njets:163934.0 -> eps 0.6452 0.6452
+  b: QS -> tag I njets:163934.0, tag J njets:28220.0 -> eps 0.6452 0.1111
+  b: QU -> tag I njets:163934.0, tag J njets:2777.0 -> eps 0.6452 0.0109
+  b: QX -> tag I njets:163934.0, tag J njets:32500.0 -> eps 0.6452 0.1279
+  b: SS -> tag I njets:28220.0, tag J njets:28220.0 -> eps 0.1111 0.1111
+  b: SU -> tag I njets:28220.0, tag J njets:2777.0 -> eps 0.1111 0.0109
+  b: SX -> tag I njets:28220.0, tag J njets:32500.0 -> eps 0.1111 0.1279
+  b: UX -> tag I njets:2777.0, tag J njets:32500.0 -> eps 0.0109 0.1279
+  b: XX -> tag I njets:32500.0, tag J njets:32500.0 -> eps 0.1279 0.1279
+------ for the rho numerator ------
+  c: CC -> 10552.0
+  c: CL -> 3248.0
+  c: CQ -> 882.0
+  c: CS -> 2096.0
+  c: CU -> 3645.0
+  c: CX -> 33094.0
+  c: LL -> 353.0
+  c: LQ -> 160.0
+  c: LS -> 432.0
+  c: LU -> 598.0
+  c: LX -> 5412.0
+  c: QQ -> 33.0
+  c: QS -> 141.0
+  c: QU -> 157.0
+  c: QX -> 1511.0
+  c: SS -> 155.0
+  c: SU -> 376.0
+  c: SX -> 3736.0
+  c: UX -> 5719.0
+  c: XX -> 25728.0
+------ for the rho denominator ------
+  c: CC -> tag I njets:64069.0, tag J njets:64069.0 -> eps 0.3268 0.3268
+  c: CL -> tag I njets:64069.0, tag J njets:10556.0 -> eps 0.3268 0.0538
+  c: CQ -> tag I njets:64069.0, tag J njets:2917.0 -> eps 0.3268 0.0149
+  c: CS -> tag I njets:64069.0, tag J njets:7091.0 -> eps 0.3268 0.0362
+  c: CU -> tag I njets:64069.0, tag J njets:10495.0 -> eps 0.3268 0.0535
+  c: CX -> tag I njets:64069.0, tag J njets:100928.0 -> eps 0.3268 0.5148
+  c: LL -> tag I njets:10556.0, tag J njets:10556.0 -> eps 0.0538 0.0538
+  c: LQ -> tag I njets:10556.0, tag J njets:2917.0 -> eps 0.0538 0.0149
+  c: LS -> tag I njets:10556.0, tag J njets:7091.0 -> eps 0.0538 0.0362
+  c: LU -> tag I njets:10556.0, tag J njets:10495.0 -> eps 0.0538 0.0535
+  c: LX -> tag I njets:10556.0, tag J njets:100928.0 -> eps 0.0538 0.5148
+  c: QQ -> tag I njets:2917.0, tag J njets:2917.0 -> eps 0.0149 0.0149
+  c: QS -> tag I njets:2917.0, tag J njets:7091.0 -> eps 0.0149 0.0362
+  c: QU -> tag I njets:2917.0, tag J njets:10495.0 -> eps 0.0149 0.0535
+  c: QX -> tag I njets:2917.0, tag J njets:100928.0 -> eps 0.0149 0.5148
+  c: SS -> tag I njets:7091.0, tag J njets:7091.0 -> eps 0.0362 0.0362
+  c: SU -> tag I njets:7091.0, tag J njets:10495.0 -> eps 0.0362 0.0535
+  c: SX -> tag I njets:7091.0, tag J njets:100928.0 -> eps 0.0362 0.5148
+  c: UX -> tag I njets:10495.0, tag J njets:100928.0 -> eps 0.0535 0.5148
+  c: XX -> tag I njets:100928.0, tag J njets:100928.0 -> eps 0.5148 0.5148
+------ for the rho numerator ------
+  x: CC -> 159.0
+  x: CL -> 193.0
+  x: CQ -> 29.0
+  x: CS -> 97.0
+  x: CU -> 247.0
+  x: CX -> 13974.0
+  x: LL -> 89.0
+  x: LQ -> 24.0
+  x: LS -> 79.0
+  x: LU -> 165.0
+  x: LX -> 8535.0
+  x: QQ -> 12.0
+  x: QS -> 23.0
+  x: QU -> 15.0
+  x: QX -> 1095.0
+  x: SS -> 27.0
+  x: SU -> 62.0
+  x: SX -> 3856.0
+  x: UX -> 10291.0
+  x: XX -> 311144.0
+------ for the rho denominator ------
+  x: CC -> tag I njets:14858.0, tag J njets:14858.0 -> eps 0.0212 0.0212
+  x: CL -> tag I njets:14858.0, tag J njets:9174.0 -> eps 0.0212 0.0131
+  x: CQ -> tag I njets:14858.0, tag J njets:1210.0 -> eps 0.0212 0.0017
+  x: CS -> tag I njets:14858.0, tag J njets:4171.0 -> eps 0.0212 0.0060
+  x: CU -> tag I njets:14858.0, tag J njets:10780.0 -> eps 0.0212 0.0154
+  x: CX -> tag I njets:14858.0, tag J njets:660039.0 -> eps 0.0212 0.9426
+  x: LL -> tag I njets:9174.0, tag J njets:9174.0 -> eps 0.0131 0.0131
+  x: LQ -> tag I njets:9174.0, tag J njets:1210.0 -> eps 0.0131 0.0017
+  x: LS -> tag I njets:9174.0, tag J njets:4171.0 -> eps 0.0131 0.0060
+  x: LU -> tag I njets:9174.0, tag J njets:10780.0 -> eps 0.0131 0.0154
+  x: LX -> tag I njets:9174.0, tag J njets:660039.0 -> eps 0.0131 0.9426
+  x: QQ -> tag I njets:1210.0, tag J njets:1210.0 -> eps 0.0017 0.0017
+  x: QS -> tag I njets:1210.0, tag J njets:4171.0 -> eps 0.0017 0.0060
+  x: QU -> tag I njets:1210.0, tag J njets:10780.0 -> eps 0.0017 0.0154
+  x: QX -> tag I njets:1210.0, tag J njets:660039.0 -> eps 0.0017 0.9426
+  x: SS -> tag I njets:4171.0, tag J njets:4171.0 -> eps 0.0060 0.0060
+  x: SU -> tag I njets:4171.0, tag J njets:10780.0 -> eps 0.0060 0.0154
+  x: SX -> tag I njets:4171.0, tag J njets:660039.0 -> eps 0.0060 0.9426
+  x: UX -> tag I njets:10780.0, tag J njets:660039.0 -> eps 0.0154 0.9426
+  x: XX -> tag I njets:660039.0, tag J njets:660039.0 -> eps 0.9426 0.9426
+Correlation inputs for sim / qqb:
+  n_events = {'b': 127038.0, 'c': 98028.0, 'x': 350116.0}
+  n_jets   = {'b': 254076.0, 'c': 196056.0, 'x': 700232.0}
+  Single-jet efficiencies:
+    flavor b:
+ eps[b][Q] = 0.645216 with uncertainty 0.000949
+ eps[b][S] = 0.111069 with uncertainty 0.000623
+ eps[b][L] = 0.068188 with uncertainty 0.000500
+ eps[b][C] = 0.036682 with uncertainty 0.000373
+ eps[b][X] = 0.127914 with uncertainty 0.000663
+ eps[b][U] = 0.010930 with uncertainty 0.000206
+    flavor c:
+ eps[c][Q] = 0.014878 with uncertainty 0.000273
+ eps[c][S] = 0.036168 with uncertainty 0.000422
+ eps[c][L] = 0.053842 with uncertainty 0.000510
+ eps[c][C] = 0.326789 with uncertainty 0.001059
+ eps[c][X] = 0.514792 with uncertainty 0.001129
+ eps[c][U] = 0.053531 with uncertainty 0.000508
+    flavor x:
+ eps[x][Q] = 0.001728 with uncertainty 0.000050
+ eps[x][S] = 0.005957 with uncertainty 0.000092
+ eps[x][L] = 0.013101 with uncertainty 0.000136
+ eps[x][C] = 0.021219 with uncertainty 0.000172
+ eps[x][X] = 0.942600 with uncertainty 0.000278
+ eps[x][U] = 0.015395 with uncertainty 0.000147
+  Pair probabilities and correlations:
+    flavor b:
+      QQ: P = 0.413388, rho = -0.007004667256262365
+      SS: P = 0.012044, rho = -0.023727511036349513
+      LL: P = 0.004447, rho = -0.043476596515557686
+      CC: P = 0.001551, rho = 0.15246578496564678
+      XX: P = 0.014673, rho = -0.1032470267455623
+      QS: P = 0.144225, rho = 0.006260620501567837
+      LQ: P = 0.088414, rho = 0.004797299641810193
+      CQ: P = 0.047269, rho = -0.0013996656562980103
+      QX: P = 0.169162, rho = 0.024820164963198277
+      LS: P = 0.015350, rho = 0.013369904369195496
+      CS: P = 0.007832, rho = -0.03879991057387855
+      SX: P = 0.028330, rho = -0.0029771313307528358
+      CL: P = 0.005140, rho = 0.027513813797075404
+      LX: P = 0.017184, rho = -0.01494433033633047
+      CX: P = 0.009131, rho = -0.026978672829316652
+      QU: P = 0.014586, rho = 0.034175267465706316
+      SU: P = 0.002314, rho = -0.046813056628216
+      LU: P = 0.001393, rho = -0.06526654476240368
+      CU: P = 0.000889, rho = 0.10930327444474153
+      UX: P = 0.002676, rho = -0.042842691338190186
+    flavor c:
+      QQ: P = 0.000337, rho = 0.5207268539993881
+      SS: P = 0.001581, rho = 0.20872320808198785
+      LL: P = 0.003601, rho = 0.24218441395794366
+      CC: P = 0.107643, rho = 0.00797329221735632
+      XX: P = 0.262456, rho = -0.00964060493886243
+      QS: P = 0.001438, rho = 0.3364580643611115
+      LQ: P = 0.001632, rho = 0.018742230899265078
+      CQ: P = 0.008997, rho = -0.07473880536738986
+      QX: P = 0.015414, rho = 0.006228249156704724
+      LS: P = 0.004407, rho = 0.13150640760675825
+      CS: P = 0.021382, rho = -0.09548455879494555
+      SX: P = 0.038112, rho = 0.023452880467680348
+      CL: P = 0.033133, rho = -0.058438198240598926
+      LX: P = 0.055209, rho = -0.004074443803414152
+      CX: P = 0.337597, rho = 0.0033900440822494105
+      QU: P = 0.001602, rho = 0.005451017943964187
+      SU: P = 0.003836, rho = -0.009446231858634357
+      LU: P = 0.006100, rho = 0.05827734060554279
+      CU: P = 0.037183, rho = 0.06278956589731366
+      UX: P = 0.058340, rho = 0.05853719786243583
+    flavor x:
+      QQ: P = 0.000034, rho = 10.47842906905266
+      SS: P = 0.000077, rho = 1.173478426837911
+      LL: P = 0.000254, rho = 0.4809639416120355
+      CC: P = 0.000454, rho = 0.008668284917563218
+      XX: P = 0.888688, rho = 0.00021689194002072476
+      QS: P = 0.000066, rho = 2.1911280367591264
+      LQ: P = 0.000069, rho = 0.5139414839278091
+      CQ: P = 0.000083, rho = 0.1295207857525067
+      QX: P = 0.003128, rho = -0.03993396633624913
+      LS: P = 0.000226, rho = 0.4456731643956211
+      CS: P = 0.000277, rho = 0.0960065362955358
+      SX: P = 0.011013, rho = -0.019225441764787576
+      CL: P = 0.000551, rho = -0.008528641299689221
+      LX: P = 0.024378, rho = -0.013000015652998131
+      CX: P = 0.039912, rho = -0.002224717717689395
+      QU: P = 0.000043, rho = -0.19475306275778526
+      SU: P = 0.000177, rho = -0.034450168114585566
+      LU: P = 0.000471, rho = 0.16828392573510764
+      CU: P = 0.000705, rho = 0.07984094823700238
+      UX: P = 0.029393, rho = 0.012770804927502155
+
+  QQ: yield =  85533.520, frac = 0.091317
+  CQ: yield =  11254.539, frac = 0.012016
+  LX: yield =  26248.657, frac = 0.028023
+  LQ: yield =  18577.475, frac = 0.019834
+  SX: yield =  18211.328, frac = 0.019443
+  SU: yield =   1191.198, frac = 0.001272
+  SS: yield =   2785.970, frac = 0.002974
+  LS: yield =   4004.832, frac = 0.004276
+  QU: yield =   3295.321, frac = 0.003518
+  CL: yield =   6662.244, frac = 0.007113
+  LU: yield =   1529.680, frac = 0.001633
+  XX: yield = 551231.571, frac = 0.588503
+  QS: yield =  30082.621, frac = 0.032117
+  CC: yield =  17750.797, frac = 0.018951
+  LL: yield =   1638.710, frac = 0.001750
+  QX: yield =  39211.882, frac = 0.041863
+  CS: yield =   5187.893, frac = 0.005539
+  CU: yield =   6517.413, frac = 0.006958
+  CX: yield =  78482.347, frac = 0.083789
+  UX: yield =  26606.668, frac = 0.028406
+
+Making masks for subprocesses...
+  - Subprocess uudd: 224552 / 575589 entries.
+  - Subprocess ss: 125645 / 575589 entries.
+  - Subprocess cc: 98337 / 575589 entries.
+  - Subprocess bb: 127055 / 575589 entries.
+Now running on sample data...
+Reading batch 1 / 1...

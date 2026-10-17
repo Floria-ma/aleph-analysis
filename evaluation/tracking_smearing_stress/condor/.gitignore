@@ -1,0 +1,5 @@
+logs/
+*.sub
+*.dag
+*.dag.*
+stress_inference_jobs.txt

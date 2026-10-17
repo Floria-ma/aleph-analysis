@@ -180,7 +180,17 @@ def preprocess_jets(jets, prepdict, translation=None):
     return data
         
 
-def infer_jets(jets, modelname, prepdict, translation=None, batch_size=None):
+def make_inference_session(modelname, num_threads=8):
+    model = onnx.load(modelname)
+    onnx.checker.check_model(model)
+
+    session_options = onnxruntime.SessionOptions()
+    session_options.inter_op_num_threads = num_threads
+    session_options.intra_op_num_threads = num_threads
+    return onnxruntime.InferenceSession(modelname, session_options)
+
+
+def infer_jets(jets, modelname, prepdict, translation=None, batch_size=None, session=None):
 
     # get the data in correct format
     data = preprocess_jets(jets, prepdict, translation=translation)
@@ -206,21 +216,8 @@ def infer_jets(jets, modelname, prepdict, translation=None, batch_size=None):
     print(f'[INFO in infer_jets]: received {ndata} instances for inference.')
     print(f'[INFO in infer_jets]: split instances into {len(batches)} batches of size {batch_size}')
 
-    # load model
-    # note: only used for checking?
-    #       see here: https://onnxruntime.ai/docs/get-started/with-python.html
-    model = onnx.load(modelname)
-    onnx.checker.check_model(model)
-    #print('Model input:')
-    #print(model.graph.input)
-    #print('Model output:')
-    #print(model.graph.output)
-
-    # start inference session
-    session_options = onnxruntime.SessionOptions()
-    session_options.inter_op_num_threads = 8
-    session_options.intra_op_num_threads = 8
-    session = onnxruntime.InferenceSession(modelname, session_options)
+    if session is None:
+        session = make_inference_session(modelname)
 
     # run the inference
     outputs = []

@@ -1,0 +1,32 @@
+{
+  "refined_hybrid_non_gaussian_tracking_candidate": {
+    "sip2d": {
+      "model": "gaussian_laplace_tail",
+      "scale": 1.02,
+      "core_width": 0.15,
+      "tail_fraction": 0.005,
+      "tail_width": 5.0
+    },
+    "sip3d": {
+      "model": "gaussian_laplace_tail",
+      "scale": 1.08,
+      "core_width": 0.0,
+      "tail_fraction": 0.015,
+      "tail_width": 2.0
+    },
+    "dxy": {
+      "model": "gaussian_laplace_tail",
+      "gaussian_sigma": 0.001,
+      "core_width": 0.00025,
+      "tail_fraction": 0.0025,
+      "tail_width": 0.005
+    },
+    "dz": {
+      "model": "gaussian_laplace_tail",
+      "gaussian_sigma": 0.00125,
+      "core_width": 0.001,
+      "tail_fraction": 0.015,
+      "tail_width": 0.0125
+    }
+  }
+}
